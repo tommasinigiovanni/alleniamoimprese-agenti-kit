@@ -22,6 +22,9 @@ PLUGIN_TELEGRAM="telegram@claude-plugins-official"
 # Impronta della chiave di firma di Claude Code, pubblicata da Anthropic nella
 # documentazione di installazione (code.claude.com/docs/en/setup).
 IMPRONTA_CHIAVE_CLAUDE="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
+# Nei primi minuti di una macchina nuova gli aggiornamenti automatici di Ubuntu
+# tengono occupato apt: si aspetta che lo liberino, fino a dieci minuti.
+APT=(apt-get -o DPkg::Lock::Timeout=600)
 MARKETPLACE="anthropics/claude-plugins-official"
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -65,8 +68,8 @@ come_agente() {
 
 sistema_base() {
   export DEBIAN_FRONTEND=noninteractive
-  riprova apt-get update -q || return 1
-  riprova apt-get install -y -q tmux git qrencode jq unzip curl ca-certificates \
+  riprova "${APT[@]}" update -q || return 1
+  riprova "${APT[@]}" install -y -q tmux git qrencode jq unzip curl ca-certificates \
     gnupg tzdata unattended-upgrades iproute2 || return 1
   if ! timedatectl set-timezone Europe/Rome 2>/dev/null; then
     ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime
@@ -115,13 +118,15 @@ claude_code() {
   fi
   echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" \
     > /etc/apt/sources.list.d/claude-code.list
-  riprova apt-get update -q || return 1
-  DEBIAN_FRONTEND=noninteractive riprova apt-get install -y -q claude-code || return 1
+  riprova "${APT[@]}" update -q || return 1
+  DEBIAN_FRONTEND=noninteractive riprova "${APT[@]}" install -y -q claude-code || return 1
   command -v claude >/dev/null
 }
 
 file_agente() {
   install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/.claude"
+  # Creata subito da agente: all'accesso sulla console la creerebbe root.
+  install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/.cache"
   install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/lavoro"
   chmod 700 "$CASA"
 
