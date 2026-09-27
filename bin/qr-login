@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Mostra come QR l'ultimo indirizzo https comparso nella sessione di Claude,
 # così lo apri con il telefono invece di copiarlo dalla console.
+#
+# Claude Code spezza l'indirizzo lungo con ritorni a capo veri, alla larghezza
+# della finestra, e scrive le righe dell'indirizzo senza rientro. Si ricompone
+# unendo la riga che comincia con https:// alle righe successive, finché non
+# arriva una riga vuota o rientrata (per esempio "  Paste code here...").
 set -uo pipefail
 
 if ! testo="$(tmux capture-pane -p -J -S -300 -t claude 2>/dev/null)"; then
@@ -8,7 +13,13 @@ if ! testo="$(tmux capture-pane -p -J -S -300 -t claude 2>/dev/null)"; then
   exit 1
 fi
 
-indirizzo="$(printf '%s\n' "$testo" | grep -o 'https://[^[:space:]]*' | tail -n 1)"
+indirizzo="$(printf '%s\n' "$testo" | awk '
+  { sub(/[[:space:]]+$/, "") }
+  /^https:\/\// { indirizzo = $0; dentro = 1; next }
+  dentro && /^[^[:space:]]/ { indirizzo = indirizzo $0; next }
+  { dentro = 0 }
+  END { print indirizzo }')"
+
 if [ -z "$indirizzo" ]; then
   echo "Nessun indirizzo trovato."
   echo "Entra nella sessione (voce 1), scrivi /login e scegli l'abbonamento Claude,"
