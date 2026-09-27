@@ -43,6 +43,12 @@ jobs:
             a tmux -L agenti capture-pane -p -t claude
             echo "=== righe con https, catturate con -J"
             a tmux -L agenti capture-pane -p -J -S -300 -t claude | grep -n 'https' || echo "nessuna"
-            echo "=== qr-login"
-            a bash -lc qr-login | tail -n 2 || true
+            echo "=== qr-login: l'indirizzo ricomposto"
+            indirizzo="$(a bash -lc qr-login | sed -n '2p')"
+            echo "$indirizzo"
+            echo "lunghezza: ${#indirizzo}"
+            case "$indirizzo" in
+              https://*state=*) echo "passa: l'indirizzo arriva fino a state=" ;;
+              *) echo "FALLISCE: indirizzo incompleto"; exit 1 ;;
+            esac
           done
