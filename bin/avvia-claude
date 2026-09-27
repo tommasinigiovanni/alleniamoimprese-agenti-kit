@@ -12,5 +12,7 @@ if [ -s "$HOME/.claude/channels/telegram/.env" ]; then
   argomenti+=(--channels plugin:telegram@claude-plugins-official)
 fi
 
-tmux kill-session -t claude 2>/dev/null || true
-exec tmux new-session -d -s claude -c "$HOME/lavoro" claude "${argomenti[@]}"
+# Un socket tmux solo per questa sessione: gli altri tmux dello studente non
+# tengono in vita il server quando Claude si chiude, e il servizio lo riavvia.
+tmux -L agenti kill-server 2>/dev/null || true
+exec tmux -L agenti new-session -d -s claude -c "$HOME/lavoro" claude "${argomenti[@]}"

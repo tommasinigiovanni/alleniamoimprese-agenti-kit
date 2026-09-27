@@ -11,7 +11,7 @@ indirizzo="https://esempio.claude.com/cai/oauth/authorize?code=true&client_id=00
 TMUX_TMPDIR="$(mktemp -d)"
 export TMUX_TMPDIR
 schermo="$TMUX_TMPDIR/schermo.txt"
-trap 'tmux kill-server 2>/dev/null || true; rm -rf "$TMUX_TMPDIR"' EXIT
+trap 'tmux -L agenti kill-server 2>/dev/null || true; rm -rf "$TMUX_TMPDIR"' EXIT
 
 {
   echo "  Login"
@@ -21,7 +21,7 @@ trap 'tmux kill-server 2>/dev/null || true; rm -rf "$TMUX_TMPDIR"' EXIT
   echo "  Esc to cancel"
 } > "$schermo"
 
-tmux new-session -d -s claude -x 100 -y 40 "cat '$schermo'; sleep 60"
+tmux -L agenti new-session -d -s claude -x 100 -y 40 "cat '$schermo'; sleep 60"
 sleep 1
 
 uscita="$(bash "$RADICE/bin/qr-login")"

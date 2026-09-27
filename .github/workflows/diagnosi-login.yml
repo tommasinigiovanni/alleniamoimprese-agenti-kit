@@ -29,20 +29,20 @@ jobs:
             a systemctl --user --machine=agente@ restart claude-sessione.service 2>/dev/null ||
               sudo systemctl --user --machine=agente@ restart claude-sessione.service
             sleep 12
-            a tmux resize-window -t claude -x "$larghezza" -y 40 || true
+            a tmux -L agenti resize-window -t claude -x "$larghezza" -y 40 || true
             sleep 2
-            a tmux send-keys -t claude '/login'
+            a tmux -L agenti send-keys -t claude '/login'
             sleep 2
-            a tmux send-keys -t claude Enter
+            a tmux -L agenti send-keys -t claude Enter
             sleep 6
             echo "=== dopo /login"
-            a tmux capture-pane -p -t claude
-            a tmux send-keys -t claude Enter
+            a tmux -L agenti capture-pane -p -t claude
+            a tmux -L agenti send-keys -t claude Enter
             sleep 10
             echo "=== dopo la scelta dell'abbonamento"
-            a tmux capture-pane -p -t claude
+            a tmux -L agenti capture-pane -p -t claude
             echo "=== righe con https, catturate con -J"
-            a tmux capture-pane -p -J -S -300 -t claude | grep -n 'https' || echo "nessuna"
+            a tmux -L agenti capture-pane -p -J -S -300 -t claude | grep -n 'https' || echo "nessuna"
             echo "=== qr-login"
             a bash -lc qr-login | tail -n 2 || true
           done

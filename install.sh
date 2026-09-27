@@ -19,6 +19,9 @@ STATO="$STATO_DIR/stato"
 REGISTRO=/var/log/agenti-kit-install.log
 SENZA_SYSTEMD="${AGENTI_SENZA_SYSTEMD:-0}"
 PLUGIN_TELEGRAM="telegram@claude-plugins-official"
+# Impronta della chiave di firma di Claude Code, pubblicata da Anthropic nella
+# documentazione di installazione (code.claude.com/docs/en/setup).
+IMPRONTA_CHIAVE_CLAUDE="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
 MARKETPLACE="anthropics/claude-plugins-official"
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -44,6 +47,17 @@ passo() {
   fi
 }
 
+# Ripete un comando fino a tre volte: la rete a volte cade proprio adesso.
+riprova() {
+  local tentativo
+  for tentativo in 1 2 3; do
+    "$@" && return 0
+    echo "Tentativo $tentativo non riuscito: riprovo fra 10 secondi."
+    sleep 10
+  done
+  return 1
+}
+
 # Esegue un comando come agente, con la sua casa e il suo PATH.
 come_agente() {
   runuser -l "$UTENTE" -c "export PATH=\"\$HOME/.bun/bin:\$HOME/.local/bin:\$PATH\"; $1"
@@ -51,9 +65,9 @@ come_agente() {
 
 sistema_base() {
   export DEBIAN_FRONTEND=noninteractive
-  apt-get update -q &&
-    apt-get install -y -q tmux git qrencode jq unzip curl ca-certificates \
-      gnupg tzdata unattended-upgrades iproute2 || return 1
+  riprova apt-get update -q || return 1
+  riprova apt-get install -y -q tmux git qrencode jq unzip curl ca-certificates \
+    gnupg tzdata unattended-upgrades iproute2 || return 1
   if ! timedatectl set-timezone Europe/Rome 2>/dev/null; then
     ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime
     echo Europe/Rome > /etc/timezone
@@ -79,23 +93,37 @@ utente_agente() {
 # comunque tutto; questo toglie anche il servizio.
 niente_ssh() {
   [ "$SENZA_SYSTEMD" = 1 ] && return 0
-  systemctl disable --now ssh.socket ssh.service >/dev/null 2>&1 || true
-  ! systemctl is-active --quiet ssh.service
+  local unita
+  for unita in ssh.socket ssh.service; do
+    systemctl stop "$unita" >/dev/null 2>&1 || true
+    systemctl mask "$unita" >/dev/null 2>&1 || return 1
+  done
+  ! systemctl is-active --quiet ssh.socket && ! systemctl is-active --quiet ssh.service
 }
 
 claude_code() {
   install -d -m 0755 /etc/apt/keyrings
-  curl -fsSL --retry 3 https://downloads.claude.ai/keys/claude-code.asc \
+  riprova curl -fsSL https://downloads.claude.ai/keys/claude-code.asc \
     -o /etc/apt/keyrings/claude-code.asc || return 1
+  local impronta
+  impronta="$(GNUPGHOME="$(mktemp -d)" gpg --show-keys --with-colons \
+    /etc/apt/keyrings/claude-code.asc 2>/dev/null | awk -F: '/^fpr/ {print $10; exit}')"
+  if [ "$impronta" != "$IMPRONTA_CHIAVE_CLAUDE" ]; then
+    echo "La chiave scaricata non è quella di Anthropic: mi fermo."
+    rm -f /etc/apt/keyrings/claude-code.asc
+    return 1
+  fi
   echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" \
     > /etc/apt/sources.list.d/claude-code.list
-  apt-get update -q && DEBIAN_FRONTEND=noninteractive apt-get install -y -q claude-code || return 1
+  riprova apt-get update -q || return 1
+  DEBIAN_FRONTEND=noninteractive riprova apt-get install -y -q claude-code || return 1
   command -v claude >/dev/null
 }
 
 file_agente() {
   install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/.claude"
-  install -d -o "$UTENTE" -g "$UTENTE" -m 755 "$CASA/lavoro"
+  install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/lavoro"
+  chmod 700 "$CASA"
 
   # Impostazioni: si toccano solo le chiavi del kit.
   local impostazioni="$CASA/.claude/settings.json"
@@ -136,6 +164,7 @@ FINE
   if ! grep -q '.bun/bin' "$CASA/.profile" 2>/dev/null; then
     # shellcheck disable=SC2016 # si espande al login di agente, non qui
     echo 'export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"' >> "$CASA/.profile"
+    echo 'umask 077' >> "$CASA/.profile"
   fi
   chown -R "$UTENTE:$UTENTE" "$CASA/.claude" "$CASA/.claude.json" "$CASA/lavoro" \
     "$CASA/.profile" "$CASA/.tmux.conf"
@@ -143,24 +172,26 @@ FINE
 
 bun_agente() {
   if [ ! -x "$CASA/.bun/bin/bun" ]; then
-    come_agente 'curl -fsSL --retry 3 https://bun.sh/install | bash' || return 1
+    riprova come_agente 'curl -fsSL https://bun.sh/install | bash' || return 1
   fi
   [ -x "$CASA/.bun/bin/bun" ]
 }
 
 plugin_telegram() {
-  come_agente "claude plugin marketplace add $MARKETPLACE >/dev/null 2>&1 || true
-               claude plugin install $PLUGIN_TELEGRAM -s user -y" || return 1
+  riprova come_agente "claude plugin marketplace add $MARKETPLACE >/dev/null 2>&1 || true
+                       claude plugin install $PLUGIN_TELEGRAM -s user -y" || return 1
   come_agente "claude plugin list 2>/dev/null" | grep -q telegram
 }
 
 comandi() {
   local comando
   for comando in "$KIT_DIR"/bin/*; do
-    install -m 755 -o root -g root "$comando" /usr/local/bin/
+    install -m 755 -o root -g root "$comando" /usr/local/bin/ || return 1
   done
-  install -d -m 755 /usr/local/share/agenti-kit
-  cp "$KIT_DIR/VERSIONE" /usr/local/share/agenti-kit/ 2>/dev/null || true
+  install -d -m 755 /usr/local/share/agenti-kit || return 1
+  if [ -f "$KIT_DIR/VERSIONE" ]; then
+    install -m 644 "$KIT_DIR/VERSIONE" /usr/local/share/agenti-kit/ || return 1
+  fi
 }
 
 sessione_claude() {
@@ -207,6 +238,6 @@ passo "console" console_tty1
 if grep -q 'da-completare' "$STATO"; then
   echo "=== Installazione finita con passi da completare:"
   grep 'da-completare' "$STATO"
-else
-  echo "=== Installazione completa."
+  exit 1
 fi
+echo "=== Installazione completa."

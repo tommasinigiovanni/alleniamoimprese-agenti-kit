@@ -36,7 +36,7 @@ la sessione resta accesa.
 FINE
   read -r -p "Scelta: " scelta
   case "$scelta" in
-    1) tmux attach -t claude || { echo "La sessione non è accesa: scegli 4."; attendi; } ;;
+    1) tmux -L agenti attach -t claude || { echo "La sessione non è accesa: scegli 4."; attendi; } ;;
     2) salute-base; attendi ;;
     3) qr-login; attendi ;;
     4) riavvia-claude; attendi ;;

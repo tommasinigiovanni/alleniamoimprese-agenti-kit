@@ -28,6 +28,12 @@ controlla "settings.json spegne l'aggiornamento automatico" bash -c "jq -e '.env
 controlla ".claude.json salta l'onboarding" bash -c "jq -e '.hasCompletedOnboarding == true' $CASA/.claude.json"
 controlla ".claude.json si fida di ~/lavoro" bash -c "jq -e '.projects[\"$CASA/lavoro\"].hasTrustDialogAccepted == true' $CASA/.claude.json"
 controlla ".claude.json leggibile solo da agente" bash -c "[ \"\$(stat -c %a $CASA/.claude.json)\" = 600 ]"
+controlla "la casa di agente è chiusa agli altri" bash -c "[ \"\$(stat -c %a $CASA)\" = 700 ]"
+controlla "la cartella di lavoro è chiusa agli altri" bash -c "[ \"\$(stat -c %a $CASA/lavoro)\" = 700 ]"
+controlla "la chiave apt è quella di Anthropic" bash -c "GNUPGHOME=\$(mktemp -d) gpg --show-keys --with-colons /etc/apt/keyrings/claude-code.asc | grep -q 31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
+if [ -d /run/systemd/system ]; then
+  controlla "SSH mascherato, socket e servizio" bash -c '[ "$(systemctl is-enabled ssh.socket 2>/dev/null)" = masked ] && [ "$(systemctl is-enabled ssh.service 2>/dev/null)" = masked ]'
+fi
 controlla "i file di agente sono di agente" bash -c "[ -z \"\$(find $CASA -not -user agente -print -quit)\" ]"
 controlla "la cartella di lavoro ha il CLAUDE.md segnaposto" test -s "$CASA/lavoro/CLAUDE.md"
 controlla "bun installato per agente" test -x "$CASA/.bun/bin/bun"

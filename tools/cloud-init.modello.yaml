@@ -4,4 +4,4 @@
 # Se l'impronta non torna, si ferma e non installa niente.
 packages: [curl, ca-certificates]
 runcmd:
-  - [bash, -c, 'set -euo pipefail; cd /root; curl -fsSL --retry 5 --max-time 180 -o kit.tar.gz https://github.com/{REPOSITORY}/releases/download/{VERSIONE}/alleniamoimprese-agenti-kit-{VERSIONE}.tar.gz; echo "{IMPRONTA}  kit.tar.gz" | sha256sum -c -; rm -rf /opt/agenti-kit; tar -xzf kit.tar.gz -C /opt --no-same-owner; bash /opt/agenti-kit/install.sh']
+  - [bash, -c, 'set -euo pipefail; cd /root; curl -fsSL --retry 10 --retry-all-errors --retry-delay 10 --max-time 180 -o kit.tar.gz https://github.com/{REPOSITORY}/releases/download/{VERSIONE}/alleniamoimprese-agenti-kit-{VERSIONE}.tar.gz; echo "{IMPRONTA}  kit.tar.gz" | sha256sum -c -; rm -rf /opt/agenti-kit; tar -xzf kit.tar.gz -C /opt --no-same-owner; bash /opt/agenti-kit/install.sh']

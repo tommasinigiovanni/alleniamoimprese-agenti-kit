@@ -3,8 +3,10 @@ Description=Sessione di Claude Code in tmux (corso Agenti che non dormono)
 
 [Service]
 Type=forking
+# Aspetta la rete fino a un minuto: al riavvio il servizio può partire prima.
+ExecStartPre=/bin/sh -c 'i=0; while [ "$i" -lt 30 ]; do getent hosts api.anthropic.com >/dev/null && exit 0; i=$((i + 1)); sleep 2; done; exit 0'
 ExecStart=/usr/local/bin/avvia-claude
-ExecStop=/usr/bin/tmux kill-session -t claude
+ExecStop=/usr/bin/tmux -L agenti kill-server
 Restart=always
 RestartSec=5
 

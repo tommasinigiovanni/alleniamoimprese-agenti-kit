@@ -56,16 +56,23 @@ else
 fi
 
 # 5. La sessione è accesa.
-if tmux has-session -t claude 2>/dev/null; then
+if tmux -L agenti has-session -t claude 2>/dev/null; then
   riga ok "La sessione di Claude è accesa"
 else
   riga no "La sessione di Claude è spenta: menu, voce 4."
 fi
 
-# 6. Nessuna porta in ascolto verso l'esterno.
+# 6. Nessuna porta in ascolto verso l'esterno, TCP e UDP.
 # L'indirizzo può avere l'interfaccia dopo %, per esempio 127.0.0.53%lo:53.
-pubbliche="$(ss -H -ltn 2>/dev/null | awk '{print $4}' | sed -E 's/%[^:]*:/:/' |
-  grep -vE '^(127\.[0-9.]+|\[?::1\]?|\[::ffff:127\.[0-9.]+\]):[0-9]+$' | paste -sd' ' -)"
+# In UDP restano fuori le porte dei client DHCP (68 e 546), che non accettano
+# connessioni.
+pubbliche="$( {
+    ss -H -ltn 2>/dev/null | awk '{print "tcp " $4}'
+    ss -H -lun 2>/dev/null | awk '{print "udp " $4}'
+  } | sed -E 's/%[^:]*:/:/' | awk '
+    $2 ~ /^(127\.[0-9.]+|\[?::1\]?|\[::ffff:127\.[0-9.]+\]):[0-9]+$/ { next }
+    $1 == "udp" && $2 ~ /:(68|546)$/ { next }
+    { print $1 "/" $2 }' | paste -sd' ' -)"
 if [ -z "$pubbliche" ]; then
   riga ok "Nessuna porta aperta verso l'esterno"
 else

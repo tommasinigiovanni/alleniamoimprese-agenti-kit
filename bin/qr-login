@@ -8,7 +8,7 @@
 # arriva una riga vuota o rientrata (per esempio "  Paste code here...").
 set -uo pipefail
 
-if ! testo="$(tmux capture-pane -p -J -S -300 -t claude 2>/dev/null)"; then
+if ! testo="$(tmux -L agenti capture-pane -p -J -S -300 -t claude 2>/dev/null)"; then
   echo "La sessione di Claude non è attiva: dal menu, voce 4."
   exit 1
 fi
@@ -27,7 +27,9 @@ if [ -z "$indirizzo" ]; then
   exit 1
 fi
 
-qrencode -t ANSIUTF8 -m 1 "$indirizzo"
-echo
-echo "Inquadra il QR con il telefono. L'indirizzo per intero:"
+# Prima l'indirizzo, per ultimo il QR: il QR è alto, e così non scorre via.
+echo "L'indirizzo per intero:"
 echo "$indirizzo"
+echo
+echo "Inquadra il QR qui sotto con il telefono."
+qrencode -t ANSIUTF8 -m 2 "$indirizzo"

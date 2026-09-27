@@ -14,6 +14,7 @@ L'archivio è riproducibile: con gli stessi file esce la stessa impronta.
 import gzip
 import hashlib
 import io
+import re
 import sys
 import tarfile
 from pathlib import Path
@@ -65,8 +66,8 @@ def archivio(versione):
 
 
 def main():
-    if len(sys.argv) != 2 or not sys.argv[1].startswith("v"):
-        sys.exit("Uso: python3 tools/crea-rilascio.py v0.1")
+    if len(sys.argv) != 2 or not re.fullmatch(r"v\d+\.\d+(\.\d+)?(-[a-z0-9]+)?", sys.argv[1]):
+        sys.exit("Uso: python3 tools/crea-rilascio.py v0.1 (versione come v0.1, v0.1.1 o v0.0-prova)")
     versione = sys.argv[1]
     dist = RADICE / "dist"
     dist.mkdir(exist_ok=True)
