@@ -52,7 +52,7 @@ if [ "$(claude auth status --json 2>/dev/null | jq -r '.loggedIn // false' 2>/de
   piano="$(claude auth status --json 2>/dev/null | jq -r '.subscriptionType // "?"')"
   riga ok "Login fatto (abbonamento: $piano)"
 else
-  riga no "Fai il login: menu, voce 1, poi /login. Per l'indirizzo, voce 3. Dopo, voce 4."
+  riga no "Fai il login: menu, voce 3 (QR), poi voce 1 per scrivere il codice. Dopo, voce 4."
 fi
 
 # 5. La sessione è accesa.

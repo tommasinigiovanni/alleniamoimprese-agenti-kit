@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# Mostra come QR l'ultimo indirizzo https comparso nella sessione di Claude,
-# così lo apri con il telefono invece di copiarlo dalla console.
+# Il login di Claude con il QR, dal menu, senza entrare nella sessione.
+#
+# Se il login non è ancora fatto, chiede /login alla sessione di Claude,
+# sceglie l'abbonamento Claude e aspetta l'indirizzo. Poi lo mostra per intero
+# e come QR, da aprire con il telefono. Il codice che dà il telefono si scrive
+# nella sessione (menu, voce 1).
 #
 # Claude Code spezza l'indirizzo lungo con ritorni a capo veri, alla larghezza
 # della finestra, e scrive le righe dell'indirizzo senza rientro. Si ricompone
@@ -8,22 +12,53 @@
 # arriva una riga vuota o rientrata (per esempio "  Paste code here...").
 set -uo pipefail
 
-if ! testo="$(tmux -L agenti capture-pane -p -J -S -300 -t claude 2>/dev/null)"; then
+SOCKET=agenti
+
+cattura() {
+  tmux -L "$SOCKET" capture-pane -p -J -S -300 -t claude 2>/dev/null
+}
+
+ricomponi() {
+  awk '
+    { sub(/[[:space:]]+$/, "") }
+    /^https:\/\// { indirizzo = $0; dentro = 1; next }
+    dentro && /^[^[:space:]]/ { indirizzo = indirizzo $0; next }
+    { dentro = 0 }
+    END { print indirizzo }'
+}
+
+if ! tmux -L "$SOCKET" has-session -t claude 2>/dev/null; then
   echo "La sessione di Claude non è attiva: dal menu, voce 4."
   exit 1
 fi
 
-indirizzo="$(printf '%s\n' "$testo" | awk '
-  { sub(/[[:space:]]+$/, "") }
-  /^https:\/\// { indirizzo = $0; dentro = 1; next }
-  dentro && /^[^[:space:]]/ { indirizzo = indirizzo $0; next }
-  { dentro = 0 }
-  END { print indirizzo }')"
+if [ "$(claude auth status --json 2>/dev/null | jq -r '.loggedIn // false' 2>/dev/null)" = true ]; then
+  echo "Il login è già fatto: il QR non serve."
+  exit 0
+fi
+
+indirizzo="$(cattura | ricomponi)"
+if [ -z "$indirizzo" ]; then
+  echo "Chiedo il login alla sessione di Claude, un momento..."
+  tmux -L "$SOCKET" send-keys -t claude Escape
+  sleep 1
+  tmux -L "$SOCKET" send-keys -t claude '/login'
+  sleep 2
+  tmux -L "$SOCKET" send-keys -t claude Enter
+  sleep 4
+  # La prima voce è l'abbonamento Claude (Pro, Max, Team, Enterprise).
+  tmux -L "$SOCKET" send-keys -t claude Enter
+  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+    sleep 2
+    indirizzo="$(cattura | ricomponi)"
+    [ -n "$indirizzo" ] && break
+  done
+fi
 
 if [ -z "$indirizzo" ]; then
-  echo "Nessun indirizzo trovato."
-  echo "Entra nella sessione (voce 1), scrivi /login e scegli l'abbonamento Claude,"
-  echo "poi esci con Ctrl+B e D e torna qui."
+  echo "L'indirizzo non è comparso."
+  echo "Entra nella sessione (voce 1), scrivi /login e scegli l'abbonamento Claude."
+  echo "Poi esci con Ctrl+B e D e torna qui."
   exit 1
 fi
 
@@ -31,7 +66,8 @@ fi
 echo "L'indirizzo per intero:"
 echo "$indirizzo"
 echo
-echo "Inquadra il QR qui sotto con il telefono."
+echo "Inquadra il QR con il telefono e fai il login. La pagina ti dà un codice:"
+echo "scrivilo nella sessione, menu voce 1, e premi Invio."
 # L'indirizzo del login fa un QR largo circa 77 caratteri più il margine: su
 # uno schermo da 80 colonne il margine scende a 1 perché la riga non vada a capo.
 colonne="$(tput cols 2>/dev/null || echo 80)"

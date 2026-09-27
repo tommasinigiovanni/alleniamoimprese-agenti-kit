@@ -31,20 +31,10 @@ jobs:
             sleep 12
             a tmux -L agenti resize-window -t claude -x "$larghezza" -y 40 || true
             sleep 2
-            a tmux -L agenti send-keys -t claude '/login'
-            sleep 2
-            a tmux -L agenti send-keys -t claude Enter
-            sleep 6
-            echo "=== dopo /login"
-            a tmux -L agenti capture-pane -p -t claude
-            a tmux -L agenti send-keys -t claude Enter
-            sleep 10
-            echo "=== dopo la scelta dell'abbonamento"
-            a tmux -L agenti capture-pane -p -t claude
-            echo "=== righe con https, catturate con -J"
-            a tmux -L agenti capture-pane -p -J -S -300 -t claude | grep -n 'https' || echo "nessuna"
-            echo "=== qr-login: l'indirizzo ricomposto"
-            indirizzo="$(a bash -lc qr-login | sed -n '2p')"
+            echo "=== qr-login dal menu: chiede il login da solo"
+            a bash -lc qr-login > /tmp/qr.txt 2>&1 || true
+            head -n 3 /tmp/qr.txt
+            indirizzo="$(grep -m1 '^https://' /tmp/qr.txt)"
             echo "$indirizzo"
             echo "lunghezza: ${#indirizzo}"
             case "$indirizzo" in

@@ -26,7 +26,7 @@ Agenti che non dormono: la tua macchina ($(cat /usr/local/share/agenti-kit/VERSI
 
   1  Entra nella sessione di Claude
   2  Controllo salute
-  3  QR per il login
+  3  Login con il QR (poi il codice si scrive con la voce 1)
   4  Riavvia la sessione di Claude
   5  Completa l'installazione del plugin Telegram
   0  Esci nella shell

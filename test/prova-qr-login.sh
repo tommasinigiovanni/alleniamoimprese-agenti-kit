@@ -21,6 +21,11 @@ trap 'tmux -L agenti kill-server 2>/dev/null || true; rm -rf "$TMUX_TMPDIR"' EXI
   echo "  Esc to cancel"
 } > "$schermo"
 
+# Un claude finto: il login risulta non fatto, così qr-login cerca l'indirizzo.
+mkdir -p "$TMUX_TMPDIR/bin"
+printf '%s\n' '#!/bin/sh' 'echo "{\"loggedIn\": false}"' > "$TMUX_TMPDIR/bin/claude"
+chmod 755 "$TMUX_TMPDIR/bin/claude"
+PATH="$TMUX_TMPDIR/bin:$PATH"
 tmux -L agenti new-session -d -s claude -x 100 -y 40 "cat '$schermo'; sleep 60"
 sleep 1
 
