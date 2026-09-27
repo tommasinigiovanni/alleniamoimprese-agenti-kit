@@ -63,7 +63,8 @@ else
 fi
 
 # 6. Nessuna porta in ascolto verso l'esterno.
-pubbliche="$(ss -H -ltn 2>/dev/null | awk '{print $4}' |
+# L'indirizzo può avere l'interfaccia dopo %, per esempio 127.0.0.53%lo:53.
+pubbliche="$(ss -H -ltn 2>/dev/null | awk '{print $4}' | sed -E 's/%[^:]*:/:/' |
   grep -vE '^(127\.[0-9.]+|\[?::1\]?|\[::ffff:127\.[0-9.]+\]):[0-9]+$' | paste -sd' ' -)"
 if [ -z "$pubbliche" ]; then
   riga ok "Nessuna porta aperta verso l'esterno"

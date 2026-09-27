@@ -129,11 +129,16 @@ live: fino ad allora qui c'è solo questo file.
 FINE
   fi
 
+  if [ ! -e "$CASA/.tmux.conf" ]; then
+    printf '%s\n' 'set -g focus-events on' 'set -g history-limit 10000' > "$CASA/.tmux.conf"
+  fi
+
   if ! grep -q '.bun/bin' "$CASA/.profile" 2>/dev/null; then
     # shellcheck disable=SC2016 # si espande al login di agente, non qui
     echo 'export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"' >> "$CASA/.profile"
   fi
-  chown -R "$UTENTE:$UTENTE" "$CASA/.claude" "$CASA/.claude.json" "$CASA/lavoro" "$CASA/.profile"
+  chown -R "$UTENTE:$UTENTE" "$CASA/.claude" "$CASA/.claude.json" "$CASA/lavoro" \
+    "$CASA/.profile" "$CASA/.tmux.conf"
 }
 
 bun_agente() {
@@ -160,7 +165,8 @@ comandi() {
 
 sessione_claude() {
   local cartella="$CASA/.config/systemd/user"
-  install -d -o "$UTENTE" -g "$UTENTE" "$CASA/.config" "$cartella" "$cartella/default.target.wants"
+  install -d -o "$UTENTE" -g "$UTENTE" "$CASA/.config" "$CASA/.config/systemd" \
+    "$cartella" "$cartella/default.target.wants"
   install -m 644 -o "$UTENTE" -g "$UTENTE" "$KIT_DIR/systemd/claude-sessione.service" "$cartella/"
   ln -sfn ../claude-sessione.service "$cartella/default.target.wants/claude-sessione.service"
   chown -h "$UTENTE:$UTENTE" "$cartella/default.target.wants/claude-sessione.service"

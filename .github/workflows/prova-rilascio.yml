@@ -1,0 +1,47 @@
+name: Prova della release
+
+# Una macchina pulita esegue il testo di cloud-init di una release pubblicata,
+# come farebbe Hetzner: scarica l'archivio, controlla l'impronta, installa.
+
+on:
+  workflow_dispatch:
+    inputs:
+      versione:
+        description: "Versione da provare, per esempio v0.1"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  macchina-pulita:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scarica il testo di cloud-init della release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSIONE: ${{ inputs.versione }}
+        run: |
+          gh release download "$VERSIONE" --repo "$GITHUB_REPOSITORY" \
+            --pattern "cloud-init-$VERSIONE.yaml" --output cloud-init.yaml
+          cat cloud-init.yaml
+      - name: Esegue la riga di runcmd come cloud-init
+        run: |
+          sudo apt-get install -y -q python3-yaml > /dev/null
+          comando="$(python3 -c "import yaml; print(yaml.safe_load(open('cloud-init.yaml'))['runcmd'][0][2])")"
+          sudo bash -c "$comando"
+      - name: Verifica
+        run: sudo bash test/verifica-installazione.sh
+      - name: salute-base come agente
+        if: always()
+        run: |
+          sleep 10
+          sudo -u agente -H bash -lc 'salute-base' || true
+      - name: Registro dell'installazione
+        if: always()
+        run: sudo tail -n 60 /var/log/agenti-kit-install.log || true
