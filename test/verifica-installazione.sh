@@ -34,7 +34,9 @@ controlla "la chiave apt è quella di Anthropic" bash -c "GNUPGHOME=\$(mktemp -d
 if [ -d /run/systemd/system ]; then
   controlla "SSH mascherato, socket e servizio" bash -c '[ "$(systemctl is-enabled ssh.socket 2>/dev/null)" = masked ] && [ "$(systemctl is-enabled ssh.service 2>/dev/null)" = masked ]'
 fi
-controlla "i file di agente sono di agente" bash -c "[ -z \"\$(find $CASA -not -user agente -print -quit)\" ]"
+# All'accesso automatico sulla console un file può essere di root per un
+# istante: si ricontrolla dopo tre secondi prima di dare errore.
+controlla "i file di agente sono di agente" bash -c "[ -z \"\$(find $CASA -not -user agente -print -quit)\" ] || { sleep 3; [ -z \"\$(find $CASA -not -user agente -print -quit)\" ]; }"
 controlla "la cartella di lavoro ha il CLAUDE.md segnaposto" test -s "$CASA/lavoro/CLAUDE.md"
 controlla "bun installato per agente" test -x "$CASA/.bun/bin/bun"
 controlla "i comandi sono in /usr/local/bin" bash -c 'for c in agenti-menu salute-base qr-login riavvia-claude avvia-claude; do [ -x /usr/local/bin/$c ] || exit 1; done'
