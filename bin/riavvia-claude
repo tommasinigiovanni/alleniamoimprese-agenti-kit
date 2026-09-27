@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Riavvia la sessione di Claude. Serve dopo il login, per accendere Remote
+# Control, e quando la sessione si è fermata.
+if systemctl --user restart claude-sessione.service; then
+  echo "Sessione riavviata. Fra qualche secondo la trovi nell'app Claude, sotto Code."
+else
+  echo "Non riesco a riavviare la sessione. Scrivilo nello spogliatoio."
+  exit 1
+fi

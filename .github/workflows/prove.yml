@@ -1,0 +1,68 @@
+name: Prove del kit
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  controlli:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shellcheck
+        run: shellcheck -x -s bash install.sh bin/* test/*.sh
+      - name: Rilascio riproducibile e sotto i 32 KiB
+        run: |
+          python3 tools/crea-rilascio.py v0.0-prova
+          uno=$(cut -d' ' -f1 dist/alleniamoimprese-agenti-kit-v0.0-prova.tar.gz.sha256)
+          python3 tools/crea-rilascio.py v0.0-prova
+          due=$(cut -d' ' -f1 dist/alleniamoimprese-agenti-kit-v0.0-prova.tar.gz.sha256)
+          test "$uno" = "$due"
+          wc -c dist/cloud-init-v0.0-prova.yaml
+      - name: Schema di cloud-init
+        run: |
+          sudo apt-get install -y -q cloud-init > /dev/null
+          cloud-init schema --config-file dist/cloud-init-v0.0-prova.yaml
+      - name: qr-login
+        run: |
+          sudo apt-get install -y -q tmux qrencode > /dev/null
+          bash test/prova-qr-login.sh
+
+  installazione:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Copia del kit come lo trova la macchina
+        run: |
+          sudo mkdir -p /opt/agenti-kit
+          sudo cp -r install.sh bin systemd console test /opt/agenti-kit/
+          echo v-prova | sudo tee /opt/agenti-kit/VERSIONE
+      - name: Prima installazione
+        run: sudo bash /opt/agenti-kit/install.sh
+      - name: Seconda installazione, deve reggere
+        run: sudo bash /opt/agenti-kit/install.sh
+      - name: Stato dei passi
+        run: sudo cat /var/lib/agenti-kit/stato
+      - name: Verifica
+        run: sudo bash /opt/agenti-kit/test/verifica-installazione.sh
+      - name: La sessione di Claude gira come servizio di agente
+        run: |
+          sleep 15
+          sudo systemctl --user --machine=agente@ status claude-sessione.service --no-pager || true
+          sudo -u agente -H tmux has-session -t claude
+          sudo -u agente -H tmux capture-pane -p -t claude | tail -n 20
+      - name: Il server SSH è spento
+        run: "! systemctl is-active --quiet ssh.service"
+      - name: salute-base come agente, senza login
+        run: sudo -u agente -H bash -lc 'salute-base' || true
+      - name: Registro dell'installazione
+        if: always()
+        run: sudo tail -n 120 /var/log/agenti-kit-install.log || true

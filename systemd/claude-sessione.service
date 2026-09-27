@@ -1,0 +1,12 @@
+[Unit]
+Description=Sessione di Claude Code in tmux (corso Agenti che non dormono)
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/avvia-claude
+ExecStop=/usr/bin/tmux kill-session -t claude
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# Controllo di base della macchina: è la soglia dell'esercizio 0.
+# Una riga per controllo. Esce con 0 solo se è tutto a posto.
+set -uo pipefail
+
+UTENTE=agente
+STATO=/var/lib/agenti-kit/stato
+da_fare=0
+
+riga() {
+  if [ "$1" = ok ]; then
+    printf '[OK]      %s\n' "$2"
+  else
+    printf '[DA FARE] %s\n' "$2"
+    da_fare=$((da_fare + 1))
+  fi
+}
+
+# 1. L'installazione è finita. Il plugin si può completare dopo, dal menu:
+#    lo si guarda direttamente invece di fidarsi del file di stato.
+if [ ! -f "$STATO" ]; then
+  riga no "Installazione: non risulta fatta. Scrivilo nello spogliatoio."
+else
+  mancanti="$(grep 'da-completare' "$STATO" | cut -d' ' -f1)"
+  if claude plugin list 2>/dev/null | grep -q telegram; then
+    mancanti="$(printf '%s\n' "$mancanti" | grep -vx plugin)"
+  fi
+  mancanti="$(printf '%s\n' "$mancanti" | sed '/^$/d' | paste -sd, -)"
+  if [ -z "$mancanti" ]; then
+    riga ok "Installazione completa"
+  else
+    riga no "Installazione: da completare ($mancanti). Per il plugin: menu, voce 5."
+  fi
+fi
+
+# 2. L'agente non è amministratore.
+if id -nG "$UTENTE" 2>/dev/null | tr ' ' '\n' | grep -qxE 'sudo|admin|wheel'; then
+  riga no "L'utente $UTENTE ha i poteri di amministratore: non deve averli."
+else
+  riga ok "L'agente non è amministratore"
+fi
+
+# 3. Claude Code c'è.
+if command -v claude >/dev/null 2>&1; then
+  riga ok "Claude Code installato ($(claude --version 2>/dev/null | awk '{print $1}'))"
+else
+  riga no "Claude Code non è installato."
+fi
+
+# 4. Il login è fatto.
+if [ "$(claude auth status --json 2>/dev/null | jq -r '.loggedIn // false' 2>/dev/null)" = true ]; then
+  piano="$(claude auth status --json 2>/dev/null | jq -r '.subscriptionType // "?"')"
+  riga ok "Login fatto (abbonamento: $piano)"
+else
+  riga no "Fai il login: menu, voce 1, poi /login. Per l'indirizzo, voce 3. Dopo, voce 4."
+fi
+
+# 5. La sessione è accesa.
+if tmux has-session -t claude 2>/dev/null; then
+  riga ok "La sessione di Claude è accesa"
+else
+  riga no "La sessione di Claude è spenta: menu, voce 4."
+fi
+
+# 6. Nessuna porta in ascolto verso l'esterno.
+pubbliche="$(ss -H -ltn 2>/dev/null | awk '{print $4}' |
+  grep -vE '^(127\.[0-9.]+|\[?::1\]?|\[::ffff:127\.[0-9.]+\]):[0-9]+$' | paste -sd' ' -)"
+if [ -z "$pubbliche" ]; then
+  riga ok "Nessuna porta aperta verso l'esterno"
+else
+  riga no "Porte in ascolto verso l'esterno: $pubbliche"
+fi
+
+# 7. Spazio sul disco.
+uso="$(df -P / | awk 'NR == 2 {gsub("%", "", $5); print $5}')"
+if [ "${uso:-100}" -lt 90 ]; then
+  riga ok "Spazio sul disco: usato il $uso%"
+else
+  riga no "Disco quasi pieno: usato il $uso%."
+fi
+
+echo
+if [ "$da_fare" -eq 0 ]; then
+  echo "Tutto a posto."
+  exit 0
+fi
+echo "Cose da fare: $da_fare."
+exit 1

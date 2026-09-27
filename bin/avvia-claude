@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Apre la sessione tmux "claude" nella cartella di lavoro.
+# La lancia il servizio claude-sessione; a mano si usa riavvia-claude.
+set -euo pipefail
+
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
+cd "$HOME/lavoro"
+
+argomenti=()
+# Telegram solo quando il token del bot è stato inserito (prepara-notte).
+if [ -s "$HOME/.claude/channels/telegram/.env" ]; then
+  argomenti+=(--channels plugin:telegram@claude-plugins-official)
+fi
+
+tmux kill-session -t claude 2>/dev/null || true
+exec tmux new-session -d -s claude -c "$HOME/lavoro" claude "${argomenti[@]}"

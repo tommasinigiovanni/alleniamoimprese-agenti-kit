@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Mostra come QR l'ultimo indirizzo https comparso nella sessione di Claude,
+# così lo apri con il telefono invece di copiarlo dalla console.
+set -uo pipefail
+
+if ! testo="$(tmux capture-pane -p -J -S -300 -t claude 2>/dev/null)"; then
+  echo "La sessione di Claude non è attiva: dal menu, voce 4."
+  exit 1
+fi
+
+indirizzo="$(printf '%s\n' "$testo" | grep -o 'https://[^[:space:]]*' | tail -n 1)"
+if [ -z "$indirizzo" ]; then
+  echo "Nessun indirizzo trovato."
+  echo "Entra nella sessione (voce 1), scrivi /login e scegli l'abbonamento Claude,"
+  echo "poi esci con Ctrl+B e D e torna qui."
+  exit 1
+fi
+
+qrencode -t ANSIUTF8 -m 1 "$indirizzo"
+echo
+echo "Inquadra il QR con il telefono. L'indirizzo per intero:"
+echo "$indirizzo"

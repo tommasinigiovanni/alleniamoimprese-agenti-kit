@@ -1,0 +1,8 @@
+# Profilo dell'utente agente (kit del corso Agenti che non dormono).
+[ -f "$HOME/.profile" ] && . "$HOME/.profile"
+export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+
+# Sulla console della macchina si apre il menu del corso.
+if [ "$(tty)" = /dev/tty1 ]; then
+  agenti-menu
+fi

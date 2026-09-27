@@ -1,0 +1,7 @@
+#cloud-config
+# Kit del corso "Agenti che non dormono", versione {VERSIONE}.
+# Scarica il kit, ne controlla l'impronta e lo installa.
+# Se l'impronta non torna, si ferma e non installa niente.
+packages: [curl, ca-certificates]
+runcmd:
+  - [bash, -c, 'set -euo pipefail; cd /root; curl -fsSL --retry 5 --max-time 180 -o kit.tar.gz https://github.com/{REPOSITORY}/releases/download/{VERSIONE}/alleniamoimprese-agenti-kit-{VERSIONE}.tar.gz; echo "{IMPRONTA}  kit.tar.gz" | sha256sum -c -; rm -rf /opt/agenti-kit; tar -xzf kit.tar.gz -C /opt --no-same-owner; bash /opt/agenti-kit/install.sh']
