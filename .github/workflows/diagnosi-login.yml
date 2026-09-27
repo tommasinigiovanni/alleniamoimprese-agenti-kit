@@ -1,0 +1,48 @@
+name: Diagnosi del login
+
+# Mostra come la sessione di Claude disegna l'indirizzo di /login, e cosa ne
+# ricava qr-login. Non completa nessun login.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  login:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installazione
+        run: |
+          sudo mkdir -p /opt/agenti-kit
+          sudo cp -r install.sh bin systemd console test /opt/agenti-kit/
+          echo v-prova | sudo tee /opt/agenti-kit/VERSIONE
+          sudo bash /opt/agenti-kit/install.sh > /dev/null
+      - name: /login nella sessione, schermo per schermo
+        run: |
+          sleep 15
+          a() { sudo -u agente -H "$@"; }
+          for larghezza in 80 128; do
+            echo "################ finestra da $larghezza colonne"
+            a systemctl --user --machine=agente@ restart claude-sessione.service 2>/dev/null ||
+              sudo systemctl --user --machine=agente@ restart claude-sessione.service
+            sleep 12
+            a tmux resize-window -t claude -x "$larghezza" -y 40 || true
+            sleep 2
+            a tmux send-keys -t claude '/login'
+            sleep 2
+            a tmux send-keys -t claude Enter
+            sleep 6
+            echo "=== dopo /login"
+            a tmux capture-pane -p -t claude
+            a tmux send-keys -t claude Enter
+            sleep 10
+            echo "=== dopo la scelta dell'abbonamento"
+            a tmux capture-pane -p -t claude
+            echo "=== righe con https, catturate con -J"
+            a tmux capture-pane -p -J -S -300 -t claude | grep -n 'https' || echo "nessuna"
+            echo "=== qr-login"
+            a bash -lc qr-login | tail -n 2 || true
+          done
