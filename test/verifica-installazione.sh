@@ -38,6 +38,12 @@ controlla "il file di stato esiste" test -s /var/lib/agenti-kit/stato
 controlla "il registro esiste" test -s /var/log/agenti-kit-install.log
 controlla "fuso orario Europe/Rome" bash -c '[ "$(readlink -f /etc/localtime)" = /usr/share/zoneinfo/Europe/Rome ]'
 
+estranei="$(find "$CASA" -not -user agente -printf '%u %p\n' 2>/dev/null | head -n 10)"
+if [ -n "$estranei" ]; then
+  echo "File nella casa di agente con un altro proprietario:"
+  echo "$estranei"
+fi
+
 echo
 echo "Stato dei passi:"
 cat /var/lib/agenti-kit/stato

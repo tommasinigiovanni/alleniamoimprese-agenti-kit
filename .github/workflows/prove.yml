@@ -54,14 +54,17 @@ jobs:
       - name: Verifica
         run: sudo bash /opt/agenti-kit/test/verifica-installazione.sh
       - name: La sessione di Claude gira come servizio di agente
+        if: always()
         run: |
           sleep 15
           sudo systemctl --user --machine=agente@ status claude-sessione.service --no-pager || true
           sudo -u agente -H tmux has-session -t claude
           sudo -u agente -H tmux capture-pane -p -t claude | tail -n 20
       - name: Il server SSH è spento
+        if: always()
         run: "! systemctl is-active --quiet ssh.service"
       - name: salute-base come agente, senza login
+        if: always()
         run: sudo -u agente -H bash -lc 'salute-base' || true
       - name: Registro dell'installazione
         if: always()
