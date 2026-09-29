@@ -56,11 +56,19 @@ contiene() { grep -q -- "$2" <<< "$1"; }
 # shellcheck disable=SC2317
 riga_esatta() { grep -qxF -- "$2" <<< "$1"; }
 # shellcheck disable=SC2317
+indirizzo_dopo_qr() {
+  local riga_qr riga_indirizzo
+  riga_qr="$(grep -n '█' <<< "$1" | tail -n 1 | cut -d: -f1)"
+  riga_indirizzo="$(grep -n '^https://' <<< "$1" | head -n 1 | cut -d: -f1)"
+  [ -n "$riga_qr" ] && [ -n "$riga_indirizzo" ] && [ "$riga_indirizzo" -gt "$riga_qr" ]
+}
+# shellcheck disable=SC2317
 sessione_chiusa() { ! tmux -L agenti-login has-session 2>/dev/null; }
 
 riuscito=0
-uscita="$(printf '%s\n' "codice-sbagliato" | bash "$RADICE/bin/qr-login" --indirizzo)" || riuscito=$?
+uscita="$(printf '%s\n' "codice-sbagliato" | bash "$RADICE/bin/qr-login")" || riuscito=$?
 controlla "qr-login ricompone l'indirizzo intero" riga_esatta "$uscita" "$indirizzo"
+controlla "l'indirizzo sta sotto il QR" indirizzo_dopo_qr "$uscita"
 controlla "c'è il QR" contiene "$uscita" '▀\|▄\|█'
 controlla "con il codice sbagliato esce con errore" test "$riuscito" -ne 0
 controlla "con il codice sbagliato lo dice" contiene "$uscita" "non è riuscito"

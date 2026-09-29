@@ -10,14 +10,15 @@
 # comando funziona anche prima di aver aperto tmux, e non tocca le sessioni
 # dello studente.
 #
-# Uso: qr-login            mostra il QR
-#      qr-login --indirizzo   mostra anche l'indirizzo per intero
+# Sotto il QR c'è anche l'indirizzo per intero: serve a chi entra da un
+# terminale dove si può copiare.
+#
+# Uso: qr-login
 set -uo pipefail
 
 SOCKET=agenti-login
 SESSIONE=login
-MOSTRA_INDIRIZZO=0
-[ "${1:-}" = "--indirizzo" ] && MOSTRA_INDIRIZZO=1
+CARATTERE=Uni2-VGA14
 
 login_fatto() {
   [ "$(claude auth status --json 2>/dev/null | jq -r '.loggedIn // false' 2>/dev/null)" = true ]
@@ -60,20 +61,29 @@ if [ -z "$indirizzo" ]; then
   exit 1
 fi
 
-# Il QR per ultimo e a schermo pulito: è alto, e così non scorre via.
-righe_qr="$(qrencode -t ANSIUTF8 -m 1 "$indirizzo" | wc -l)"
-righe_schermo="$(tput lines 2>/dev/null || echo 24)"
-clear 2>/dev/null || true
-if [ "$MOSTRA_INDIRIZZO" = 1 ]; then
-  echo "$indirizzo"
-  echo
+# Sulla console della macchina il QR vuole un carattere con i mezzi blocchi:
+# quello di serie al loro posto disegna dei cancelletti. Il kit lo imposta
+# all'installazione; qui lo si rimette, per sicurezza. Dentro tmux non si
+# può, e non serve: si prova e si va avanti.
+if [ "${TERM:-}" = linux ] && [ -z "${TMUX:-}" ]; then
+  setfont "$CARATTERE" 2>/dev/null || true
 fi
-qrencode -t ANSIUTF8 -m 1 "$indirizzo"
-if [ "$righe_schermo" -lt $((righe_qr + 3)) ]; then
-  echo "Il QR è più alto dello schermo ($righe_qr righe su $righe_schermo): ingrandisci la finestra e rilancia qr-login."
+
+# A schermo pulito, perché il QR è alto e non deve scorrere via. Senza
+# colori: la console di Linux rende male quelli di ANSIUTF8.
+righe_qr="$(qrencode -t UTF8 -m 1 "$indirizzo" | wc -l)"
+righe_schermo="$(tput lines 2>/dev/null || echo 24)"
+colonne_schermo="$(tput cols 2>/dev/null || echo 80)"
+righe_indirizzo=$(( (${#indirizzo} + colonne_schermo - 1) / colonne_schermo ))
+clear 2>/dev/null || true
+qrencode -t UTF8 -m 1 "$indirizzo"
+echo "$indirizzo"
+if [ "$righe_schermo" -lt $((righe_qr + righe_indirizzo + 4)) ]; then
+  echo "Il QR è più alto dello schermo: ingrandisci la finestra e rilancia qr-login."
 fi
 echo "Inquadra il QR con il telefono e fai il login con il tuo account Claude."
-read -r -p "La pagina ti dà un codice. Scrivilo qui e premi Invio: " codice
+echo "La pagina ti dà un codice. Scrivilo a mano: incollato, arriva sbagliato."
+read -r -p "Il codice, poi Invio: " codice
 
 if [ -z "$codice" ]; then
   echo "Nessun codice scritto: il login non è stato fatto. Rilancia qr-login."

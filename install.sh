@@ -63,7 +63,8 @@ sistema_base() {
   export DEBIAN_FRONTEND=noninteractive
   riprova "${APT[@]}" update -q || return 1
   riprova "${APT[@]}" install -y -q tmux git qrencode jq unzip curl ca-certificates \
-    gnupg tzdata unattended-upgrades iproute2 openssh-server || return 1
+    gnupg tzdata unattended-upgrades iproute2 openssh-server \
+    kbd console-setup keyboard-configuration || return 1
   if ! timedatectl set-timezone Europe/Rome 2>/dev/null; then
     ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime
     echo Europe/Rome > /etc/timezone
@@ -83,6 +84,28 @@ utente_agente() {
     gpasswd -d "$UTENTE" "$gruppo" >/dev/null 2>&1 || true
   done
   ! id -nG "$UTENTE" | tr ' ' '\n' | grep -qxE 'sudo|admin|wheel'
+}
+
+# La console del pannello manda i tasti come li manda la tastiera: senza
+# questo passo una tastiera italiana scrive i simboli di quella americana.
+# Il carattere di serie non ha i mezzi blocchi con cui si disegna il QR del
+# login: VGA 8x14 li ha. Provato sulla console di Hetzner il 29 settembre 2026.
+console_italiana() {
+  local tastiera=/etc/default/keyboard schermo=/etc/default/console-setup
+  [ -f "$tastiera" ] || printf '%s\n' 'XKBMODEL="pc105"' 'XKBLAYOUT="us"' \
+    'XKBVARIANT=""' 'XKBOPTIONS=""' 'BACKSPACE="guess"' > "$tastiera"
+  sed -i 's/^XKBLAYOUT=.*/XKBLAYOUT="it"/; s/^XKBVARIANT=.*/XKBVARIANT=""/' "$tastiera" || return 1
+  grep -qx 'XKBLAYOUT="it"' "$tastiera" || return 1
+  [ -f "$schermo" ] || printf '%s\n' 'ACTIVE_CONSOLES="/dev/tty[1-6]"' 'CHARMAP="UTF-8"' \
+    'CODESET="Uni2"' 'FONTFACE="VGA"' 'FONTSIZE="8x14"' > "$schermo"
+  sed -i 's/^CHARMAP=.*/CHARMAP="UTF-8"/; s/^CODESET=.*/CODESET="Uni2"/;
+          s/^FONTFACE=.*/FONTFACE="VGA"/; s/^FONTSIZE=.*/FONTSIZE="8x14"/' "$schermo" || return 1
+  grep -qx 'FONTFACE="VGA"' "$schermo" && grep -qx 'FONTSIZE="8x14"' "$schermo" || return 1
+  [ -f /usr/share/consolefonts/Uni2-VGA14.psf.gz ] || return 1
+  # Salva per i prossimi avvii; poi applica subito, se una console c'è.
+  setupcon --save-only >/dev/null 2>&1 || true
+  [ "$SENZA_SYSTEMD" = 1 ] && return 0
+  setupcon --force >/dev/null 2>&1 || true
 }
 
 # SSH acceso ma chiuso: si entra solo con una chiave, solo come agente, e
@@ -226,6 +249,7 @@ FINE
 
 passo "sistema" sistema_base
 passo "utente" utente_agente
+passo "console-italiana" console_italiana
 passo "ssh" ssh_solo_chiave
 passo "claude" claude_code
 passo "file" file_agente

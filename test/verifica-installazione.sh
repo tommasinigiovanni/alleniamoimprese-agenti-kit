@@ -32,6 +32,11 @@ controlla "la casa di agente è chiusa agli altri" bash -c "[ \"\$(stat -c %a $C
 controlla "la cartella del boss è chiusa agli altri" bash -c "[ \"\$(stat -c %a $CASA/boss)\" = 700 ]"
 controlla "la cartella dei progetti esiste" test -d "$CASA/progetti"
 controlla "la chiave apt è quella di Anthropic" bash -c "GNUPGHOME=\$(mktemp -d) gpg --show-keys --with-colons /etc/apt/keyrings/claude-code.asc | grep -q 31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
+controlla "tastiera italiana" grep -qx 'XKBLAYOUT="it"' /etc/default/keyboard
+controlla "carattere della console con i mezzi blocchi" bash -c 'grep -qx "FONTFACE=\"VGA\"" /etc/default/console-setup && grep -qx "FONTSIZE=\"8x14\"" /etc/default/console-setup'
+controlla "il carattere VGA 8x14 ha i mezzi blocchi del QR" bash -c 'zcat /usr/share/consolefonts/Uni2-VGA14.psf.gz > /tmp/carattere.psf && psfgettable /tmp/carattere.psf | grep -qi "U+2580" && psfgettable /tmp/carattere.psf | grep -qi "U+2584"'
+controlla "tastiera e carattere salvati per i prossimi avvii" bash -c 'ls /etc/console-setup/cached_*.kmap.gz && ls /etc/console-setup/cached_Uni2-VGA14.psf.gz'
+controlla "il promemoria non usa la tilde" bash -c '! grep -q "~" /usr/local/bin/aiuto'
 controlla "il server SSH è installato" test -x /usr/sbin/sshd
 controlla "SSH: niente password" bash -c 'mkdir -p /run/sshd; sshd -T 2>/dev/null | grep -qx "passwordauthentication no"'
 controlla "SSH: niente domande a tastiera" bash -c 'sshd -T 2>/dev/null | grep -qx "kbdinteractiveauthentication no"'

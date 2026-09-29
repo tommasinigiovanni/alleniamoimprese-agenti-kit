@@ -15,23 +15,25 @@ Alla prima accensione, come root:
    l'impronta non torna, si ferma e non installa niente.
 2. Imposta il fuso orario italiano e gli aggiornamenti di sicurezza
    automatici.
-3. Crea l'utente `agente`, senza password e senza poteri di amministratore:
+3. Imposta la console: tastiera italiana, e un carattere che sa disegnare il
+   QR del login.
+4. Crea l'utente `agente`, senza password e senza poteri di amministratore:
    tu e Claude lavorate con questo utente.
-4. Lascia acceso SSH, ma chiuso: si entra solo con una chiave, solo come
+5. Lascia acceso SSH, ma chiuso: si entra solo con una chiave, solo come
    `agente`, e all'inizio `agente` non ha nessuna chiave. Root da SSH non
    entra mai.
-5. Installa tmux, git e Claude Code, dal repository firmato di Anthropic, con
+6. Installa tmux, git e Claude Code, dal repository firmato di Anthropic, con
    l'aggiornamento automatico spento.
-6. Crea `~/boss`, la cartella della prima sessione di Claude, con le sue
+7. Crea `~/boss`, la cartella della prima sessione di Claude, con le sue
    istruzioni in `CLAUDE.md`, e `~/progetti` per le altre.
-7. Sulla console entra da solo come `agente` e mostra il promemoria dei
+8. Sulla console entra da solo come `agente` e mostra il promemoria dei
    comandi.
 
 ## I comandi del kit
 
 - `salute`: controlla che la macchina sia a posto, una riga per controllo.
-- `qr-login`: il login di Claude con il telefono. Mostra un QR, aspetta il
-  codice e lo passa a Claude.
+- `qr-login`: il login di Claude con il telefono. Mostra un QR e sotto
+  l'indirizzo per intero, aspetta il codice e lo passa a Claude.
 - `aiuto`: il promemoria dei comandi.
 
 ## Scelte di sicurezza
@@ -62,6 +64,9 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
 - `v0.2`: il kit ridotto. Escono menu, sessione automatica, Bun e plugin
   Telegram; SSH resta acceso solo con chiave. I pezzi usciti sono in
   `archivio-v0.1/`.
+- `v0.2.1`: dalla prova sulla console di Hetzner. Tastiera italiana, carattere
+  della console con i mezzi blocchi, QR senza colori con l'indirizzo sotto,
+  niente `~` nei comandi da scrivere.
 
 ## Per chi sviluppa il kit
 

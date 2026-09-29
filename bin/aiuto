@@ -16,11 +16,14 @@ I comandi chiave:
   tmux new -s boss      apre la sessione "boss", che resta accesa
   tmux attach -t boss   ci rientra
   tmux ls               elenca le sessioni accese
-  cd ~/boss             va nella cartella del boss
+  cd                    torna alla cartella di partenza
+  cd boss               da lì, entra nella cartella del boss
   claude                lancia Claude nella cartella dove sei
 
 Dentro tmux: Ctrl+B e poi D per uscire lasciando tutto acceso.
 Se Ctrl+B non passa, Ctrl+A e poi D.
+
+In console si scrive a mano: il testo incollato arriva sbagliato.
 
 Non sai cosa fa un comando? Chiedilo a Claude prima di lanciarlo.
 
