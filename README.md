@@ -4,6 +4,9 @@ Il kit che prepara la macchina del corso "Agenti che non dormono" di
 AlleniamoImprese. Non si installa a mano: quando crei il server su Hetzner
 incolli nel campo cloud-init il testo della release, e la macchina fa da sola.
 
+Il kit fa solo il pavimento. tmux, Claude e Remote Control li accendi tu: è
+quello che si impara nel corso.
+
 ## Cosa fa
 
 Alla prima accensione, come root:
@@ -13,23 +16,33 @@ Alla prima accensione, come root:
 2. Imposta il fuso orario italiano e gli aggiornamenti di sicurezza
    automatici.
 3. Crea l'utente `agente`, senza password e senza poteri di amministratore:
-   Claude lavora con questo utente.
-4. Spegne il server SSH: da fuori non si entra. La macchina si usa dalla
-   console del pannello Hetzner e dal telefono.
-5. Installa Claude Code dal repository firmato di Anthropic, con
-   l'aggiornamento automatico spento, pronto per il login.
-6. Installa Bun e il plugin Telegram ufficiale di Claude Code.
-7. Fa partire la sessione di Claude in tmux come servizio dell'utente
-   `agente`: riparte da sola dopo un riavvio, con Remote Control acceso.
-8. Sulla console apre un menu: entrare nella sessione, controllo salute, QR
-   per il login, riavvio della sessione.
+   tu e Claude lavorate con questo utente.
+4. Lascia acceso SSH, ma chiuso: si entra solo con una chiave, solo come
+   `agente`, e all'inizio `agente` non ha nessuna chiave. Root da SSH non
+   entra mai.
+5. Installa tmux, git e Claude Code, dal repository firmato di Anthropic, con
+   l'aggiornamento automatico spento.
+6. Crea `~/boss`, la cartella della prima sessione di Claude, con le sue
+   istruzioni in `CLAUDE.md`, e `~/progetti` per le altre.
+7. Sulla console entra da solo come `agente` e mostra il promemoria dei
+   comandi.
+
+## I comandi del kit
+
+- `salute`: controlla che la macchina sia a posto, una riga per controllo.
+- `qr-login`: il login di Claude con il telefono. Mostra un QR, aspetta il
+  codice e lo passa a Claude.
+- `aiuto`: il promemoria dei comandi.
 
 ## Scelte di sicurezza
 
 - L'agente non è amministratore.
-- Nessuna porta aperta verso l'esterno; il kit non scrive password di root.
-- Password, chiavi e token non passano mai dalla conversazione con Claude: si
-  inseriscono dal menu della console.
+- Il firewall del pannello resta senza ingressi: da fuori non si vede nessuna
+  porta. Chi vuole usare SSH aggiunge la sua chiave e apre la porta 22 nel
+  pannello.
+- Il kit non scrive password di root.
+- Password, chiavi private e token non passano dalla conversazione con
+  Claude.
 - Il testo di cloud-init fissa l'impronta dell'archivio: la macchina esegue
   solo la versione provata.
 
@@ -44,7 +57,11 @@ Alla prima accensione, come root:
 
 Ogni versione è una release con l'archivio e il testo di cloud-init.
 
-- `v0.1`: prima prova su una macchina Hetzner vera.
+- `v0.1`: prima prova su una macchina Hetzner vera. Il kit faceva tutto:
+  menu a numeri, sessione di Claude che partiva da sola, SSH spento.
+- `v0.2`: il kit ridotto. Escono menu, sessione automatica, Bun e plugin
+  Telegram; SSH resta acceso solo con chiave. I pezzi usciti sono in
+  `archivio-v0.1/`.
 
 ## Per chi sviluppa il kit
 
@@ -52,4 +69,4 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   cloud-init in `dist/`.
 - `test/prova-docker.sh`: installazione in un contenitore Ubuntu 24.04,
   lanciata due volte, poi i controlli di `test/verifica-installazione.sh`.
-- `test/prova-qr-login.sh`: il QR del login da un indirizzo lungo.
+- `test/prova-qr-login.sh`: il login con il QR, con un `claude` finto.

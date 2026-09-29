@@ -21,7 +21,7 @@ from pathlib import Path
 
 RADICE = Path(__file__).resolve().parent.parent
 REPOSITORY = "tommasinigiovanni/alleniamoimprese-agenti-kit"
-CONTENUTO = ["install.sh", "bin", "systemd", "console"]
+CONTENUTO = ["install.sh", "bin", "boss", "console"]
 DATA_FISSA = 1767225600  # 2026-01-01, per un archivio sempre uguale
 LIMITE_CLOUD_INIT = 32 * 1024  # il massimo che accetta Hetzner
 

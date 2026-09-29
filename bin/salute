@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Controllo di base della macchina: è la soglia dell'esercizio 0.
-# Una riga per controllo. Esce con 0 solo se è tutto a posto.
+# Controllo della macchina: una riga per controllo.
+# Esce con 0 solo se è tutto a posto.
 set -uo pipefail
 
 UTENTE=agente
 STATO=/var/lib/agenti-kit/stato
+SSH_KIT=/etc/ssh/sshd_config.d/00-agenti-kit.conf
 da_fare=0
 
 riga() {
@@ -16,20 +17,15 @@ riga() {
   fi
 }
 
-# 1. L'installazione è finita. Il plugin si può completare dopo, dal menu:
-#    lo si guarda direttamente invece di fidarsi del file di stato.
+# 1. L'installazione è finita.
 if [ ! -f "$STATO" ]; then
   riga no "Installazione: non risulta fatta. Scrivilo nello spogliatoio."
 else
-  mancanti="$(grep 'da-completare' "$STATO" | cut -d' ' -f1)"
-  if claude plugin list 2>/dev/null | grep -q telegram; then
-    mancanti="$(printf '%s\n' "$mancanti" | grep -vx plugin)"
-  fi
-  mancanti="$(printf '%s\n' "$mancanti" | sed '/^$/d' | paste -sd, -)"
+  mancanti="$(grep 'da-completare' "$STATO" | cut -d' ' -f1 | paste -sd, -)"
   if [ -z "$mancanti" ]; then
     riga ok "Installazione completa"
   else
-    riga no "Installazione: da completare ($mancanti). Per il plugin: menu, voce 5."
+    riga no "Installazione: da completare ($mancanti). Scrivilo nello spogliatoio."
   fi
 fi
 
@@ -52,17 +48,35 @@ if [ "$(claude auth status --json 2>/dev/null | jq -r '.loggedIn // false' 2>/de
   piano="$(claude auth status --json 2>/dev/null | jq -r '.subscriptionType // "?"')"
   riga ok "Login fatto (abbonamento: $piano)"
 else
-  riga no "Fai il login: menu, voce 3 (QR), poi voce 1 per scrivere il codice. Dopo, voce 4."
+  riga no "Fai il login: scrivi qr-login"
 fi
 
-# 5. La sessione è accesa.
-if tmux -L agenti has-session -t claude 2>/dev/null; then
-  riga ok "La sessione di Claude è accesa"
+# 5. Il boss è acceso, e le altre sessioni.
+sessioni="$(tmux ls -F '#{session_name}' 2>/dev/null | paste -sd' ' -)"
+if tmux has-session -t '=boss' 2>/dev/null; then
+  riga ok "Sessioni accese: $sessioni"
 else
-  riga no "La sessione di Claude è spenta: menu, voce 4."
+  riga no "Il boss è spento. Scrivi: tmux new -s boss   poi: cd ~/boss   poi: claude"
 fi
 
-# 6. Nessuna porta in ascolto verso l'esterno, TCP e UDP.
+# 6. SSH: si entra solo con una chiave.
+if grep -qx 'PasswordAuthentication no' "$SSH_KIT" 2>/dev/null &&
+   grep -qx 'PermitRootLogin no' "$SSH_KIT" 2>/dev/null; then
+  chiavi=0
+  if [ -s "$HOME/.ssh/authorized_keys" ]; then
+    chiavi="$(grep -cvE '^[[:space:]]*(#|$)' "$HOME/.ssh/authorized_keys")"
+  fi
+  if [ "$chiavi" -eq 0 ]; then
+    riga ok "SSH: solo con chiave. Nessuna chiave ammessa: da SSH non entra nessuno"
+  else
+    riga ok "SSH: solo con chiave. Chiavi ammesse: $chiavi"
+  fi
+else
+  riga no "SSH accetta anche le password: non deve. Scrivilo nello spogliatoio."
+fi
+
+# 7. Nessun'altra porta in ascolto verso l'esterno, TCP e UDP.
+# La 22 è quella di SSH: la apre o la chiude il firewall del pannello.
 # L'indirizzo può avere l'interfaccia dopo %, per esempio 127.0.0.53%lo:53.
 # In UDP restano fuori le porte dei client DHCP (68 e 546), che non accettano
 # connessioni.
@@ -71,15 +85,16 @@ pubbliche="$( {
     ss -H -lun 2>/dev/null | awk '{print "udp " $4}'
   } | sed -E 's/%[^:]*:/:/' | awk '
     $2 ~ /^(127\.[0-9.]+|\[?::1\]?|\[::ffff:127\.[0-9.]+\]):[0-9]+$/ { next }
+    $1 == "tcp" && $2 ~ /:22$/ { next }
     $1 == "udp" && $2 ~ /:(68|546)$/ { next }
     { print $1 "/" $2 }' | paste -sd' ' -)"
 if [ -z "$pubbliche" ]; then
-  riga ok "Nessuna porta aperta verso l'esterno"
+  riga ok "Nessun'altra porta in ascolto verso l'esterno"
 else
   riga no "Porte in ascolto verso l'esterno: $pubbliche"
 fi
 
-# 7. Spazio sul disco.
+# 8. Spazio sul disco.
 uso="$(df -P / | awk 'NR == 2 {gsub("%", "", $5); print $5}')"
 if [ "${uso:-100}" -lt 90 ]; then
   riga ok "Spazio sul disco: usato il $uso%"

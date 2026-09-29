@@ -1,9 +1,10 @@
 # Profilo dell'utente agente (kit del corso Agenti che non dormono).
 [ -f "$HOME/.profile" ] && . "$HOME/.profile"
-export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 export LANG="${LANG:-C.UTF-8}"
 
-# Sulla console della macchina si apre il menu del corso.
-if [ "$(tty)" = /dev/tty1 ]; then
-  agenti-menu
+# All'accesso si apre la shell, con il promemoria. Non dentro tmux: lì
+# comparirebbe a ogni finestra nuova.
+if [ -z "${TMUX:-}" ]; then
+  aiuto
 fi

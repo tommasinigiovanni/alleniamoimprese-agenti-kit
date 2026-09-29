@@ -18,14 +18,12 @@ STATO_DIR=/var/lib/agenti-kit
 STATO="$STATO_DIR/stato"
 REGISTRO=/var/log/agenti-kit-install.log
 SENZA_SYSTEMD="${AGENTI_SENZA_SYSTEMD:-0}"
-PLUGIN_TELEGRAM="telegram@claude-plugins-official"
 # Impronta della chiave di firma di Claude Code, pubblicata da Anthropic nella
 # documentazione di installazione (code.claude.com/docs/en/setup).
 IMPRONTA_CHIAVE_CLAUDE="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
 # Nei primi minuti di una macchina nuova gli aggiornamenti automatici di Ubuntu
 # tengono occupato apt: si aspetta che lo liberino, fino a dieci minuti.
 APT=(apt-get -o DPkg::Lock::Timeout=600)
-MARKETPLACE="anthropics/claude-plugins-official"
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "install.sh va lanciato come root."
@@ -61,16 +59,11 @@ riprova() {
   return 1
 }
 
-# Esegue un comando come agente, con la sua casa e il suo PATH.
-come_agente() {
-  runuser -l "$UTENTE" -c "export PATH=\"\$HOME/.bun/bin:\$HOME/.local/bin:\$PATH\"; $1"
-}
-
 sistema_base() {
   export DEBIAN_FRONTEND=noninteractive
   riprova "${APT[@]}" update -q || return 1
   riprova "${APT[@]}" install -y -q tmux git qrencode jq unzip curl ca-certificates \
-    gnupg tzdata unattended-upgrades iproute2 || return 1
+    gnupg tzdata unattended-upgrades iproute2 openssh-server || return 1
   if ! timedatectl set-timezone Europe/Rome 2>/dev/null; then
     ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime
     echo Europe/Rome > /etc/timezone
@@ -92,16 +85,44 @@ utente_agente() {
   ! id -nG "$UTENTE" | tr ' ' '\n' | grep -qxE 'sudo|admin|wheel'
 }
 
-# Nessuno entra da fuori: niente server SSH. Il firewall del pannello chiude
-# comunque tutto; questo toglie anche il servizio.
-niente_ssh() {
+# SSH acceso ma chiuso: si entra solo con una chiave, solo come agente, e
+# agente all'inizio non ne ha nessuna. Da fuori la porta non si vede finché lo
+# studente non la apre nel firewall del pannello.
+# Il nome comincia con 00: in sshd vale il primo valore letto, e cloud-init
+# scrive il suo file (50-cloud-init.conf) con le password accese.
+ssh_solo_chiave() {
+  install -d -m 755 /etc/ssh/sshd_config.d
+  cat > /etc/ssh/sshd_config.d/00-agenti-kit.conf <<'FINE'
+# Kit del corso "Agenti che non dormono".
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+AllowUsers agente
+FINE
+  chmod 644 /etc/ssh/sshd_config.d/00-agenti-kit.conf
+  if ! grep -qE '^[[:space:]]*Include[[:space:]]+/etc/ssh/sshd_config\.d/\*\.conf' /etc/ssh/sshd_config; then
+    echo "sshd_config non legge la cartella sshd_config.d: mi fermo."
+    return 1
+  fi
+  mkdir -p /run/sshd
+  sshd -t || return 1
+  local valori
+  valori="$(sshd -T 2>/dev/null)"
+  printf '%s\n' "$valori" | grep -qx 'passwordauthentication no' || return 1
+  printf '%s\n' "$valori" | grep -qx 'permitrootlogin no' || return 1
   [ "$SENZA_SYSTEMD" = 1 ] && return 0
   local unita
   for unita in ssh.socket ssh.service; do
-    systemctl stop "$unita" >/dev/null 2>&1 || true
-    systemctl mask "$unita" >/dev/null 2>&1 || return 1
+    systemctl unmask "$unita" >/dev/null 2>&1 || true
   done
-  ! systemctl is-active --quiet ssh.socket && ! systemctl is-active --quiet ssh.service
+  systemctl daemon-reload
+  # Su Ubuntu 24.04 il server parte dal socket, alla prima connessione.
+  if systemctl list-unit-files ssh.socket >/dev/null 2>&1; then
+    systemctl enable --now ssh.socket >/dev/null 2>&1 || return 1
+  else
+    systemctl enable --now ssh.service >/dev/null 2>&1 || return 1
+  fi
+  systemctl try-restart ssh.service >/dev/null 2>&1 || true
 }
 
 claude_code() {
@@ -127,21 +148,24 @@ file_agente() {
   install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/.claude"
   # Creata subito da agente: all'accesso sulla console la creerebbe root.
   install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/.cache"
-  install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/lavoro"
+  install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/boss"
+  install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/progetti"
   chmod 700 "$CASA"
 
-  # Impostazioni: si toccano solo le chiavi del kit.
+  # Impostazioni: si toccano solo le chiavi del kit. Remote Control non si
+  # accende da solo: lo accende lo studente.
   local impostazioni="$CASA/.claude/settings.json"
   [ -s "$impostazioni" ] || echo '{}' > "$impostazioni"
-  jq '.remoteControlAtStartup = true | .env.DISABLE_AUTOUPDATER = "1"' \
+  jq 'del(.remoteControlAtStartup) | .env.DISABLE_AUTOUPDATER = "1"' \
     "$impostazioni" > "$impostazioni.nuovo" && mv "$impostazioni.nuovo" "$impostazioni" || return 1
 
-  # Onboarding e fiducia della cartella già accettati, senza cancellare
-  # quello che il login scrive nello stesso file.
+  # Onboarding già fatto e fiducia accettata solo per la cartella del boss,
+  # senza cancellare quello che il login scrive nello stesso file. Per le
+  # cartelle dei progetti la fiducia si dà una volta, quando si aprono.
   local configurazione="$CASA/.claude.json" versione
   versione="$(claude --version 2>/dev/null | awk '{print $1}')"
   [ -s "$configurazione" ] || echo '{}' > "$configurazione"
-  jq --arg v "$versione" --arg cartella "$CASA/lavoro" '
+  jq --arg v "$versione" --arg cartella "$CASA/boss" '
       .hasCompletedOnboarding = true
     | .lastOnboardingVersion = (if $v == "" then .lastOnboardingVersion else $v end)
     | .theme = (.theme // "dark")
@@ -149,43 +173,25 @@ file_agente() {
     "$configurazione" > "$configurazione.nuovo" && mv "$configurazione.nuovo" "$configurazione" || return 1
   chmod 600 "$configurazione"
 
-  if [ ! -e "$CASA/lavoro/CLAUDE.md" ]; then
-    cat > "$CASA/lavoro/CLAUDE.md" <<'FINE'
-# La mia macchina
-
-Macchina appena creata. Il repository con il mio sistema arriva nella seconda
-live: fino ad allora qui c'è solo questo file.
-
-- Quello che deve durare sta nei file, non nella conversazione.
-- Non chiedere e non scrivere mai password, chiavi o token nella
-  conversazione: si inseriscono dal menu della console.
-FINE
+  # Le istruzioni del boss. Se lo studente le ha già cambiate, restano le sue.
+  if [ ! -e "$CASA/boss/CLAUDE.md" ]; then
+    install -m 600 "$KIT_DIR/boss/CLAUDE.md" "$CASA/boss/CLAUDE.md" || return 1
   fi
 
+  # Ctrl+B è la combinazione di tmux. Ctrl+A è la seconda, se nella console
+  # del pannello la prima non passa.
   if [ ! -e "$CASA/.tmux.conf" ]; then
-    printf '%s\n' 'set -g focus-events on' 'set -g history-limit 10000' > "$CASA/.tmux.conf"
+    printf '%s\n' 'set -g prefix2 C-a' 'set -g focus-events on' \
+      'set -g history-limit 10000' > "$CASA/.tmux.conf"
   fi
 
-  if ! grep -q '.bun/bin' "$CASA/.profile" 2>/dev/null; then
+  if ! grep -q 'umask 077' "$CASA/.profile" 2>/dev/null; then
     # shellcheck disable=SC2016 # si espande al login di agente, non qui
-    echo 'export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"' >> "$CASA/.profile"
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$CASA/.profile"
     echo 'umask 077' >> "$CASA/.profile"
   fi
-  chown -R "$UTENTE:$UTENTE" "$CASA/.claude" "$CASA/.claude.json" "$CASA/lavoro" \
-    "$CASA/.profile" "$CASA/.tmux.conf"
-}
-
-bun_agente() {
-  if [ ! -x "$CASA/.bun/bin/bun" ]; then
-    riprova come_agente 'curl -fsSL https://bun.sh/install | bash' || return 1
-  fi
-  [ -x "$CASA/.bun/bin/bun" ]
-}
-
-plugin_telegram() {
-  riprova come_agente "claude plugin marketplace add $MARKETPLACE >/dev/null 2>&1 || true
-                       claude plugin install $PLUGIN_TELEGRAM -s user -y" || return 1
-  come_agente "claude plugin list 2>/dev/null" | grep -q telegram
+  chown -R "$UTENTE:$UTENTE" "$CASA/.claude" "$CASA/.claude.json" "$CASA/boss" \
+    "$CASA/progetti" "$CASA/.profile" "$CASA/.tmux.conf"
 }
 
 comandi() {
@@ -199,22 +205,11 @@ comandi() {
   fi
 }
 
-sessione_claude() {
-  local cartella="$CASA/.config/systemd/user"
-  install -d -o "$UTENTE" -g "$UTENTE" "$CASA/.config" "$CASA/.config/systemd" \
-    "$cartella" "$cartella/default.target.wants"
-  install -m 644 -o "$UTENTE" -g "$UTENTE" "$KIT_DIR/systemd/claude-sessione.service" "$cartella/"
-  ln -sfn ../claude-sessione.service "$cartella/default.target.wants/claude-sessione.service"
-  chown -h "$UTENTE:$UTENTE" "$cartella/default.target.wants/claude-sessione.service"
+# Le sessioni le apre lo studente in tmux. Con il linger restano accese anche
+# quando sulla console non c'è nessuno.
+sessioni_che_restano() {
   [ "$SENZA_SYSTEMD" = 1 ] && return 0
-  loginctl enable-linger "$UTENTE" || return 1
-  # Il gestore dei servizi di agente parte con il linger: si aspetta un attimo.
-  local _
-  for _ in 1 2 3 4 5 6 7 8 9 10; do
-    systemctl --user --machine="$UTENTE@" daemon-reload >/dev/null 2>&1 && break
-    sleep 2
-  done
-  systemctl --user --machine="$UTENTE@" restart claude-sessione.service
+  loginctl enable-linger "$UTENTE"
 }
 
 console_tty1() {
@@ -231,13 +226,11 @@ FINE
 
 passo "sistema" sistema_base
 passo "utente" utente_agente
-passo "ssh" niente_ssh
+passo "ssh" ssh_solo_chiave
 passo "claude" claude_code
 passo "file" file_agente
-passo "bun" bun_agente
-passo "plugin" plugin_telegram
 passo "comandi" comandi
-passo "sessione" sessione_claude
+passo "sessioni" sessioni_che_restano
 passo "console" console_tty1
 
 if grep -q 'da-completare' "$STATO"; then

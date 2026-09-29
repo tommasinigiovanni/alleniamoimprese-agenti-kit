@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Il promemoria della macchina: i comandi del kit e i pochi comandi chiave.
+# Lo mostra la console all'accesso; si rivede scrivendo: aiuto
+versione="$(cat /usr/local/share/agenti-kit/VERSIONE 2>/dev/null || echo 'kit')"
+cat <<FINE
+
+La tua macchina - Agenti che non dormono ($versione)
+Sei l'utente "agente". Qui si scrivono i comandi e si preme Invio.
+
+I comandi del kit:
+  salute      controlla che la macchina sia a posto
+  qr-login    il login di Claude, con il telefono
+  aiuto       rivedi questo testo
+
+I comandi chiave:
+  tmux new -s boss      apre la sessione "boss", che resta accesa
+  tmux attach -t boss   ci rientra
+  tmux ls               elenca le sessioni accese
+  cd ~/boss             va nella cartella del boss
+  claude                lancia Claude nella cartella dove sei
+
+Dentro tmux: Ctrl+B e poi D per uscire lasciando tutto acceso.
+Se Ctrl+B non passa, Ctrl+A e poi D.
+
+Non sai cosa fa un comando? Chiedilo a Claude prima di lanciarlo.
+
+FINE

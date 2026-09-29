@@ -37,11 +37,11 @@ jobs:
           sudo bash -c "$comando"
       - name: Verifica
         run: sudo bash test/verifica-installazione.sh
-      - name: salute-base come agente
+      - name: salute come agente
         if: always()
         run: |
           sleep 10
-          sudo -u agente -H bash -lc 'salute-base' || true
+          sudo -u agente -H bash -lc 'salute' || true
       - name: Registro dell'installazione
         if: always()
         run: sudo tail -n 60 /var/log/agenti-kit-install.log || true

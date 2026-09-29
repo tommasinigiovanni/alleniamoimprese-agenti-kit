@@ -1,76 +1,101 @@
 #!/usr/bin/env bash
-# Il login di Claude con il QR, dal menu, senza entrare nella sessione.
+# Il login di Claude con il telefono.
 #
-# Se il login non è ancora fatto, chiede /login alla sessione di Claude,
-# sceglie l'abbonamento Claude e aspetta l'indirizzo. Poi lo mostra per intero
-# e come QR, da aprire con il telefono. Il codice che dà il telefono si scrive
-# nella sessione (menu, voce 1).
+# Dalla console del pannello l'indirizzo del login non si copia: è troppo
+# lungo per ricopiarlo a mano. Questo comando chiede il login a Claude, mostra
+# l'indirizzo come QR da inquadrare con il telefono, aspetta il codice che dà
+# la pagina e lo passa a Claude.
 #
-# Claude Code spezza l'indirizzo lungo con ritorni a capo veri, alla larghezza
-# della finestra, e scrive le righe dell'indirizzo senza rientro. Si ricompone
-# unendo la riga che comincia con https:// alle righe successive, finché non
-# arriva una riga vuota o rientrata (per esempio "  Paste code here...").
+# Il login gira in una sessione tmux a parte, che si chiude alla fine: così il
+# comando funziona anche prima di aver aperto tmux, e non tocca le sessioni
+# dello studente.
+#
+# Uso: qr-login            mostra il QR
+#      qr-login --indirizzo   mostra anche l'indirizzo per intero
 set -uo pipefail
 
-SOCKET=agenti
+SOCKET=agenti-login
+SESSIONE=login
+MOSTRA_INDIRIZZO=0
+[ "${1:-}" = "--indirizzo" ] && MOSTRA_INDIRIZZO=1
 
-cattura() {
-  tmux -L "$SOCKET" capture-pane -p -J -S -300 -t claude 2>/dev/null
+login_fatto() {
+  [ "$(claude auth status --json 2>/dev/null | jq -r '.loggedIn // false' 2>/dev/null)" = true ]
 }
 
-ricomponi() {
-  awk '
-    { sub(/[[:space:]]+$/, "") }
-    /^https:\/\// { indirizzo = $0; dentro = 1; next }
-    dentro && /^[^[:space:]]/ { indirizzo = indirizzo $0; next }
-    { dentro = 0 }
-    END { print indirizzo }'
+schermo() {
+  tmux -L "$SOCKET" capture-pane -p -J -S -200 -t "$SESSIONE" 2>/dev/null
 }
 
-if ! tmux -L "$SOCKET" has-session -t claude 2>/dev/null; then
-  echo "La sessione di Claude non è attiva: dal menu, voce 4."
-  exit 1
-fi
+chiudi() {
+  tmux -L "$SOCKET" kill-server 2>/dev/null || true
+}
 
-if [ "$(claude auth status --json 2>/dev/null | jq -r '.loggedIn // false' 2>/dev/null)" = true ]; then
+if login_fatto; then
   echo "Il login è già fatto: il QR non serve."
   exit 0
 fi
 
-indirizzo="$(cattura | ricomponi)"
-if [ -z "$indirizzo" ]; then
-  echo "Chiedo il login alla sessione di Claude, un momento..."
-  tmux -L "$SOCKET" send-keys -t claude Escape
-  sleep 1
-  tmux -L "$SOCKET" send-keys -t claude '/login'
-  sleep 2
-  tmux -L "$SOCKET" send-keys -t claude Enter
-  sleep 4
-  # La prima voce è l'abbonamento Claude (Pro, Max, Team, Enterprise).
-  tmux -L "$SOCKET" send-keys -t claude Enter
-  for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-    sleep 2
-    indirizzo="$(cattura | ricomponi)"
-    [ -n "$indirizzo" ] && break
-  done
-fi
-
-if [ -z "$indirizzo" ]; then
-  echo "L'indirizzo non è comparso."
-  echo "Entra nella sessione (voce 1), scrivi /login e scegli l'abbonamento Claude."
-  echo "Poi esci con Ctrl+B e D e torna qui."
+trap chiudi EXIT
+chiudi
+# Finestra larga: l'indirizzo resta su poche righe, e capture-pane -J le unisce.
+if ! tmux -L "$SOCKET" new-session -d -s "$SESSIONE" -x 250 -y 50 \
+    'claude auth login --claudeai; echo "USCITA=$?"; sleep 900'; then
+  echo "Non riesco a chiedere il login a Claude. Scrivilo nello spogliatoio."
   exit 1
 fi
 
-# Prima l'indirizzo, per ultimo il QR: il QR è alto, e così non scorre via.
-echo "L'indirizzo per intero:"
-echo "$indirizzo"
-echo
-echo "Inquadra il QR con il telefono e fai il login. La pagina ti dà un codice:"
-echo "scrivilo nella sessione, menu voce 1, e premi Invio."
-# L'indirizzo del login fa un QR largo circa 77 caratteri più il margine: su
-# uno schermo da 80 colonne il margine scende a 1 perché la riga non vada a capo.
-colonne="$(tput cols 2>/dev/null || echo 80)"
-margine=2
-[ "$colonne" -lt 84 ] && margine=1
-qrencode -t ANSIUTF8 -m "$margine" "$indirizzo"
+echo "Chiedo il login a Claude, un momento..."
+indirizzo=""
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+  sleep 2
+  indirizzo="$(schermo | grep -o 'https://[^[:space:]]*oauth/authorize[^[:space:]]*' | head -n 1)"
+  [ -n "$indirizzo" ] && break
+done
+
+if [ -z "$indirizzo" ]; then
+  echo "L'indirizzo del login non è comparso. Claude ha risposto così:"
+  schermo | sed '/^[[:space:]]*$/d' | tail -n 5
+  echo "Riprova fra un minuto. Se continua, scrivilo nello spogliatoio."
+  exit 1
+fi
+
+# Il QR per ultimo e a schermo pulito: è alto, e così non scorre via.
+righe_qr="$(qrencode -t ANSIUTF8 -m 1 "$indirizzo" | wc -l)"
+righe_schermo="$(tput lines 2>/dev/null || echo 24)"
+clear 2>/dev/null || true
+if [ "$MOSTRA_INDIRIZZO" = 1 ]; then
+  echo "$indirizzo"
+  echo
+fi
+qrencode -t ANSIUTF8 -m 1 "$indirizzo"
+if [ "$righe_schermo" -lt $((righe_qr + 3)) ]; then
+  echo "Il QR è più alto dello schermo ($righe_qr righe su $righe_schermo): ingrandisci la finestra e rilancia qr-login."
+fi
+echo "Inquadra il QR con il telefono e fai il login con il tuo account Claude."
+read -r -p "La pagina ti dà un codice. Scrivilo qui e premi Invio: " codice
+
+if [ -z "$codice" ]; then
+  echo "Nessun codice scritto: il login non è stato fatto. Rilancia qr-login."
+  exit 1
+fi
+
+tmux -L "$SOCKET" send-keys -t "$SESSIONE" -l "$codice"
+tmux -L "$SOCKET" send-keys -t "$SESSIONE" Enter
+
+esito=""
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+  sleep 2
+  esito="$(schermo | grep -o 'USCITA=[0-9]*' | tail -n 1)"
+  [ -n "$esito" ] && break
+done
+
+if [ "$esito" = "USCITA=0" ] && login_fatto; then
+  echo "Login fatto. Ora puoi lanciare claude."
+  exit 0
+fi
+
+echo "Il login non è riuscito. Claude ha risposto così:"
+schermo | sed '/^[[:space:]]*$/d' | grep -v '^If the browser' | tail -n 3 | cut -c1-200
+echo "Il codice vale una volta sola: rilancia qr-login, che ne prepara uno nuovo."
+exit 1
