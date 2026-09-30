@@ -91,7 +91,8 @@ jobs:
           # altre porte della macchina di prova qui non contano.
           sudo -u agente -H bash -lc 'salute' | grep -E 'porta|Porte' || true
           ! sudo -u agente -H bash -lc 'salute' | grep -E 'Porte in ascolto.*:(22000|21027)( |$)'
-          udp="$(ss -H -lunp | grep -c syncthing)"
+          udp="$(sudo ss -H -lunp | grep -c syncthing || true)"
+          echo "porte UDP di Syncthing: $udp"
           test "$udp" -ge 2
       - name: salute come agente, senza login
         if: always()
