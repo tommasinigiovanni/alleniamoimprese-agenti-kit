@@ -87,7 +87,12 @@ jobs:
           test "$prima" = "$(come syncthing --device-id)"
           ss -ltn | grep -q '127.0.0.1:8384'
           sudo -u agente -H bash -lc 'salute' | grep 'Syncthing acceso. Cartelle collegate: prova'
-          sudo -u agente -H bash -lc 'salute' | grep -q "Nessun'altra porta in ascolto verso l'esterno"
+          # Le porte di Syncthing non devono comparire fra quelle aperte. Le
+          # altre porte della macchina di prova qui non contano.
+          sudo -u agente -H bash -lc 'salute' | grep -E 'porta|Porte' || true
+          ! sudo -u agente -H bash -lc 'salute' | grep -E 'Porte in ascolto.*:(22000|21027)( |$)'
+          udp="$(ss -H -lunp | grep -c syncthing)"
+          test "$udp" -ge 2
       - name: salute come agente, senza login
         if: always()
         run: sudo -u agente -H bash -lc 'salute' || true
