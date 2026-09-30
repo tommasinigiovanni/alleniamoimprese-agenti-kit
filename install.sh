@@ -25,6 +25,12 @@ IMPRONTA_CHIAVE_CLAUDE="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
 # tengono occupato apt: si aspetta che lo liberino, fino a dieci minuti.
 APT=(apt-get -o DPkg::Lock::Timeout=600)
 
+# Codex si scarica dalla release di OpenAI su GitHub, a versione fissata, e si
+# installa solo se l'impronta dell'archivio è quella attesa.
+VERSIONE_CODEX="0.159.2"
+IMPRONTA_CODEX_X86="26586b0d246d41a799b0ef8ee1add370f0fb0721b3709340f28db612381616ea"
+IMPRONTA_CODEX_ARM="472ee4d49464a4f8792bbf0162bd9ac18d7036dbc00900a03e95f715887e930f"
+
 if [ "$(id -u)" -ne 0 ]; then
   echo "install.sh va lanciato come root."
   exit 1
@@ -167,6 +173,34 @@ claude_code() {
   command -v claude >/dev/null
 }
 
+codex_cli() {
+  local architettura impronta nome temporanea
+  case "$(uname -m)" in
+    x86_64) architettura=x86_64; impronta="$IMPRONTA_CODEX_X86" ;;
+    aarch64 | arm64) architettura=aarch64; impronta="$IMPRONTA_CODEX_ARM" ;;
+    *) echo "Codex non ha una versione per questa macchina ($(uname -m))."; return 1 ;;
+  esac
+  if [ "$(codex --version 2>/dev/null | awk '{print $2}')" = "$VERSIONE_CODEX" ]; then
+    return 0
+  fi
+  nome="codex-$architettura-unknown-linux-musl"
+  temporanea="$(mktemp -d)" || return 1
+  if ! riprova curl -fsSL --max-time 600 -o "$temporanea/codex.tar.gz" \
+      "https://github.com/openai/codex/releases/download/rust-v$VERSIONE_CODEX/$nome.tar.gz"; then
+    rm -rf "$temporanea"
+    return 1
+  fi
+  if ! echo "$impronta  $temporanea/codex.tar.gz" | sha256sum -c - >/dev/null; then
+    echo "L'archivio di Codex non ha l'impronta attesa: mi fermo."
+    rm -rf "$temporanea"
+    return 1
+  fi
+  tar -xzf "$temporanea/codex.tar.gz" -C "$temporanea" --no-same-owner "$nome" || { rm -rf "$temporanea"; return 1; }
+  install -m 755 -o root -g root "$temporanea/$nome" /usr/local/bin/codex || { rm -rf "$temporanea"; return 1; }
+  rm -rf "$temporanea"
+  [ "$(codex --version 2>/dev/null | awk '{print $2}')" = "$VERSIONE_CODEX" ]
+}
+
 file_agente() {
   install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/.claude"
   # Creata subito da agente: all'accesso sulla console la creerebbe root.
@@ -252,6 +286,7 @@ passo "utente" utente_agente
 passo "console-italiana" console_italiana
 passo "ssh" ssh_solo_chiave
 passo "claude" claude_code
+passo "codex" codex_cli
 passo "file" file_agente
 passo "comandi" comandi
 passo "sessioni" sessioni_che_restano

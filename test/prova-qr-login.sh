@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Prova qr-login con un claude finto, che si comporta come "claude auth login":
+# Prova qr-login-claude con un claude finto, che si comporta come "claude auth login":
 # stampa l'indirizzo su una riga lunga, aspetta il codice, e lo accetta solo
-# se è quello giusto. qr-login deve mostrare il QR dell'indirizzo intero,
+# se è quello giusto. qr-login-claude deve mostrare il QR dell'indirizzo intero,
 # passare il codice, e dire se il login è riuscito.
 # Servono tmux, qrencode e jq.
 set -uo pipefail
@@ -66,20 +66,20 @@ indirizzo_dopo_qr() {
 sessione_chiusa() { ! tmux -L agenti-login has-session 2>/dev/null; }
 
 riuscito=0
-uscita="$(printf '%s\n' "codice-sbagliato" | bash "$RADICE/bin/qr-login")" || riuscito=$?
-controlla "qr-login ricompone l'indirizzo intero" riga_esatta "$uscita" "$indirizzo"
+uscita="$(printf '%s\n' "codice-sbagliato" | bash "$RADICE/bin/qr-login-claude")" || riuscito=$?
+controlla "qr-login-claude ricompone l'indirizzo intero" riga_esatta "$uscita" "$indirizzo"
 controlla "l'indirizzo sta sotto il QR" indirizzo_dopo_qr "$uscita"
 controlla "c'è il QR" contiene "$uscita" '▀\|▄\|█'
 controlla "con il codice sbagliato esce con errore" test "$riuscito" -ne 0
 controlla "con il codice sbagliato lo dice" contiene "$uscita" "non è riuscito"
 
 riuscito=0
-uscita="$(printf '%s\n' "$codice_giusto" | bash "$RADICE/bin/qr-login")" || riuscito=$?
+uscita="$(printf '%s\n' "$codice_giusto" | bash "$RADICE/bin/qr-login-claude")" || riuscito=$?
 controlla "con il codice giusto esce con 0" test "$riuscito" -eq 0
 controlla "con il codice giusto lo dice" contiene "$uscita" "Login fatto"
 controlla "la sessione del login si chiude alla fine" sessione_chiusa
 
-uscita="$(bash "$RADICE/bin/qr-login" < /dev/null)" || true
+uscita="$(bash "$RADICE/bin/qr-login-claude" < /dev/null)" || true
 controlla "a login fatto, non chiede niente" contiene "$uscita" "già fatto"
 
 exit "$errori"

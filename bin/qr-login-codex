@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# Il login di Codex con il telefono.
+#
+# Codex su una macchina senza schermo fa il login "con il codice": mostra un
+# indirizzo corto e un codice di poche lettere. L'indirizzo si apre con il
+# telefono, dal QR o scrivendolo a mano, e nella pagina si scrive il codice.
+# Qui in console non c'è niente da scrivere: il comando aspetta che il login
+# sia fatto e lo dice.
+#
+# Il login gira in una sessione tmux a parte, che si chiude alla fine.
+#
+# Uso: qr-login-codex
+set -uo pipefail
+
+SOCKET=agenti-login-codex
+SESSIONE=login
+CARATTERE=Uni2-VGA14
+ATTESA_MASSIMA=900  # secondi: il codice di Codex vale quindici minuti
+
+login_fatto() {
+  codex login status >/dev/null 2>&1
+}
+
+schermo() {
+  tmux -L "$SOCKET" capture-pane -p -J -S -200 -t "$SESSIONE" 2>/dev/null
+}
+
+chiudi() {
+  tmux -L "$SOCKET" kill-server 2>/dev/null || true
+}
+
+if ! command -v codex >/dev/null 2>&1; then
+  echo "Codex non è installato su questa macchina. Scrivilo nello spogliatoio."
+  exit 1
+fi
+
+if login_fatto; then
+  echo "Il login di Codex è già fatto: il QR non serve."
+  exit 0
+fi
+
+trap chiudi EXIT
+chiudi
+if ! tmux -L "$SOCKET" new-session -d -s "$SESSIONE" -x 200 -y 50 \
+    'codex login --device-auth; echo "USCITA=$?"; sleep 900'; then
+  echo "Non riesco a chiedere il login a Codex. Scrivilo nello spogliatoio."
+  exit 1
+fi
+
+echo "Chiedo il login a Codex, un momento..."
+indirizzo=""
+codice=""
+for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+  sleep 2
+  testo="$(schermo)"
+  indirizzo="$(grep -o 'https://[^[:space:]]*' <<< "$testo" | head -n 1)"
+  # Il codice è la riga dopo "Enter this one-time code": lettere maiuscole,
+  # numeri e un trattino.
+  codice="$(grep -A 3 -i 'one-time code' <<< "$testo" |
+    grep -oE '\b[A-Z0-9]{3,6}-[A-Z0-9]{3,6}\b' | head -n 1)"
+  [ -n "$indirizzo" ] && [ -n "$codice" ] && break
+  grep -q 'USCITA=' <<< "$testo" && break
+done
+
+if [ -z "$indirizzo" ] || [ -z "$codice" ]; then
+  echo "Indirizzo e codice non sono comparsi. Codex ha risposto così:"
+  schermo | sed '/^[[:space:]]*$/d' | grep -v '^USCITA=' | tail -n 5
+  echo "Riprova fra un minuto. Se continua, scrivilo nello spogliatoio."
+  exit 1
+fi
+
+# Sulla console della macchina il QR vuole un carattere con i mezzi blocchi.
+if [ "${TERM:-}" = linux ] && [ -z "${TMUX:-}" ]; then
+  setfont "$CARATTERE" 2>/dev/null || true
+fi
+
+clear 2>/dev/null || true
+qrencode -t UTF8 -m 1 "$indirizzo"
+echo "$indirizzo"
+echo
+echo "1. Apri l'indirizzo con il telefono: inquadra il QR, oppure scrivilo a mano."
+echo "2. Entra con il tuo account ChatGPT."
+echo "3. Quando la pagina chiede un codice, scrivi questo:"
+echo
+echo "      $codice"
+echo
+echo "Il codice vale quindici minuti. Qui non c'è niente da scrivere: aspetto."
+
+esito=""
+passati=0
+while [ "$passati" -lt "$ATTESA_MASSIMA" ]; do
+  sleep 3
+  passati=$((passati + 3))
+  esito="$(schermo | grep -o 'USCITA=[0-9]*' | tail -n 1)"
+  [ -n "$esito" ] && break
+done
+
+if [ "$esito" = "USCITA=0" ] && login_fatto; then
+  echo "Login di Codex fatto. Ora puoi lanciare codex."
+  exit 0
+fi
+
+if [ -z "$esito" ]; then
+  echo "Il tempo è scaduto: il codice non vale più. Rilancia qr-login-codex."
+  exit 1
+fi
+
+echo "Il login di Codex non è riuscito. Codex ha risposto così:"
+schermo | sed '/^[[:space:]]*$/d' | grep -v '^USCITA=' | tail -n 3 | cut -c1-200
+echo "Rilancia qr-login-codex, che prepara un codice nuovo."
+exit 1

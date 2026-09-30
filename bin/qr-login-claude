@@ -13,7 +13,7 @@
 # Sotto il QR c'è anche l'indirizzo per intero: serve a chi entra da un
 # terminale dove si può copiare.
 #
-# Uso: qr-login
+# Uso: qr-login-claude
 set -uo pipefail
 
 SOCKET=agenti-login
@@ -79,14 +79,14 @@ clear 2>/dev/null || true
 qrencode -t UTF8 -m 1 "$indirizzo"
 echo "$indirizzo"
 if [ "$righe_schermo" -lt $((righe_qr + righe_indirizzo + 4)) ]; then
-  echo "Il QR è più alto dello schermo: ingrandisci la finestra e rilancia qr-login."
+  echo "Il QR è più alto dello schermo: ingrandisci la finestra e rilancia qr-login-claude."
 fi
 echo "Inquadra il QR con il telefono e fai il login con il tuo account Claude."
 echo "La pagina ti dà un codice. Scrivilo a mano: incollato, arriva sbagliato."
 read -r -p "Il codice, poi Invio: " codice
 
 if [ -z "$codice" ]; then
-  echo "Nessun codice scritto: il login non è stato fatto. Rilancia qr-login."
+  echo "Nessun codice scritto: il login non è stato fatto. Rilancia qr-login-claude."
   exit 1
 fi
 
@@ -107,5 +107,5 @@ fi
 
 echo "Il login non è riuscito. Claude ha risposto così:"
 schermo | sed '/^[[:space:]]*$/d' | grep -v '^If the browser' | tail -n 3 | cut -c1-200
-echo "Il codice vale una volta sola: rilancia qr-login, che ne prepara uno nuovo."
+echo "Il codice vale una volta sola: rilancia qr-login-claude, che ne prepara uno nuovo."
 exit 1

@@ -22,6 +22,9 @@ controlla "l'utente agente esiste" id agente
 controlla "agente non è nel gruppo sudo" bash -c '! id -nG agente | tr " " "\n" | grep -qxE "sudo|admin|wheel"'
 controlla "agente non può usare sudo" bash -c '! runuser -u agente -- sudo -n true'
 controlla "claude risponde" claude --version
+controlla "codex risponde, alla versione fissata" bash -c '[ "$(codex --version | cut -d" " -f2)" = "$(sed -n "s/^VERSIONE_CODEX=\"\(.*\)\"/\1/p" /opt/agenti-kit/install.sh)" ]'
+controlla "codex è di root e non si può cambiare" bash -c '[ "$(stat -c %U:%a /usr/local/bin/codex)" = root:755 ]'
+controlla "agente può lanciare codex" runuser -l agente -c "codex --version"
 controlla "la sorgente apt di Claude Code è firmata" grep -q 'signed-by=/etc/apt/keyrings/claude-code.asc' /etc/apt/sources.list.d/claude-code.list
 controlla "Remote Control non si accende da solo: lo accende lo studente" bash -c "jq -e '.remoteControlAtStartup != true' $CASA/.claude/settings.json"
 controlla "settings.json spegne l'aggiornamento automatico" bash -c "jq -e '.env.DISABLE_AUTOUPDATER == \"1\"' $CASA/.claude/settings.json"
@@ -51,8 +54,8 @@ fi
 controlla "i file di agente sono di agente" bash -c "[ -z \"\$(find $CASA -not -user agente -print -quit)\" ] || { sleep 3; [ -z \"\$(find $CASA -not -user agente -print -quit)\" ]; }"
 controlla "il boss ha le sue istruzioni" grep -q "tmux new-session" "$CASA/boss/CLAUDE.md"
 controlla "niente Bun e niente plugin Telegram" bash -c "[ ! -e $CASA/.bun ] && [ ! -e $CASA/.claude/plugins ]"
-controlla "i comandi sono in /usr/local/bin" bash -c 'for c in salute qr-login aiuto; do [ -x /usr/local/bin/$c ] || exit 1; done'
-controlla "i comandi della v0.1 non ci sono" bash -c 'for c in agenti-menu salute-base riavvia-claude avvia-claude; do [ ! -e /usr/local/bin/$c ] || exit 1; done'
+controlla "i comandi sono in /usr/local/bin" bash -c 'for c in salute qr-login-claude qr-login-codex aiuto; do [ -x /usr/local/bin/$c ] || exit 1; done'
+controlla "i comandi della v0.1 non ci sono" bash -c 'for c in agenti-menu salute-base riavvia-claude avvia-claude qr-login; do [ ! -e /usr/local/bin/$c ] || exit 1; done'
 controlla "nessuna sessione di Claude che parte da sola" bash -c "[ ! -e $CASA/.config/systemd/user/claude-sessione.service ]"
 controlla "la console apre la shell con il benvenuto, non il menu" bash -c "grep -q aiuto $CASA/.bash_profile && ! grep -q agenti-menu $CASA/.bash_profile"
 controlla "tmux ha la seconda combinazione, Ctrl+A" grep -q "prefix2 C-a" "$CASA/.tmux.conf"

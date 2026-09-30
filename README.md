@@ -23,7 +23,8 @@ Alla prima accensione, come root:
    `agente`, e all'inizio `agente` non ha nessuna chiave. Root da SSH non
    entra mai.
 6. Installa tmux, git e Claude Code, dal repository firmato di Anthropic, con
-   l'aggiornamento automatico spento.
+   l'aggiornamento automatico spento. Installa anche Codex, dalla release di
+   OpenAI su GitHub, a versione fissata e con l'impronta controllata.
 7. Crea `~/boss`, la cartella della prima sessione di Claude, con le sue
    istruzioni in `CLAUDE.md`, e `~/progetti` per le altre.
 8. Sulla console entra da solo come `agente` e mostra il promemoria dei
@@ -32,8 +33,10 @@ Alla prima accensione, come root:
 ## I comandi del kit
 
 - `salute`: controlla che la macchina sia a posto, una riga per controllo.
-- `qr-login`: il login di Claude con il telefono. Mostra un QR e sotto
-  l'indirizzo per intero, aspetta il codice e lo passa a Claude.
+- `qr-login-claude`: il login di Claude con il telefono. Mostra un QR e
+  sotto l'indirizzo per intero, aspetta il codice e lo passa a Claude.
+- `qr-login-codex`: il login di Codex con il telefono. Mostra un QR, un
+  indirizzo corto e un codice da scrivere nella pagina.
 - `aiuto`: il promemoria dei comandi.
 
 ## Scelte di sicurezza
@@ -67,6 +70,8 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
 - `v0.2.1`: dalla prova sulla console di Hetzner. Tastiera italiana, carattere
   della console con i mezzi blocchi, QR senza colori con l'indirizzo sotto,
   niente `~` nei comandi da scrivere.
+- `v0.3`: c'è anche Codex. `qr-login` diventa `qr-login-claude`, e arriva
+  `qr-login-codex`.
 
 ## Per chi sviluppa il kit
 
@@ -74,4 +79,5 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   cloud-init in `dist/`.
 - `test/prova-docker.sh`: installazione in un contenitore Ubuntu 24.04,
   lanciata due volte, poi i controlli di `test/verifica-installazione.sh`.
-- `test/prova-qr-login.sh`: il login con il QR, con un `claude` finto.
+- `test/prova-qr-login.sh` e `test/prova-qr-login-codex.sh`: i due login con
+  il QR, con un `claude` e un `codex` finti.

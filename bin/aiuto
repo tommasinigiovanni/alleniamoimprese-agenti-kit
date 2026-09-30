@@ -8,9 +8,10 @@ La tua macchina - Agenti che non dormono ($versione)
 Sei l'utente "agente". Qui si scrivono i comandi e si preme Invio.
 
 I comandi del kit:
-  salute      controlla che la macchina sia a posto
-  qr-login    il login di Claude, con il telefono
-  aiuto       rivedi questo testo
+  salute            controlla che la macchina sia a posto
+  qr-login-claude   il login di Claude, con il telefono
+  qr-login-codex    il login di Codex, con il telefono
+  aiuto             rivedi questo testo
 
 I comandi chiave:
   tmux new -s boss      apre la sessione "boss", che resta accesa
@@ -19,6 +20,7 @@ I comandi chiave:
   cd                    torna alla cartella di partenza
   cd boss               da lì, entra nella cartella del boss
   claude                lancia Claude nella cartella dove sei
+  codex                 lancia Codex nella cartella dove sei
 
 Dentro tmux: Ctrl+B e poi D per uscire lasciando tutto acceso.
 Se Ctrl+B non passa, Ctrl+A e poi D.

@@ -11,6 +11,9 @@ da_fare=0
 riga() {
   if [ "$1" = ok ]; then
     printf '[OK]      %s\n' "$2"
+  elif [ "$1" = info ]; then
+    # Una cosa facoltativa: non conta fra quelle da fare.
+    printf '[--]      %s\n' "$2"
   else
     printf '[DA FARE] %s\n' "$2"
     da_fare=$((da_fare + 1))
@@ -48,7 +51,18 @@ if [ "$(claude auth status --json 2>/dev/null | jq -r '.loggedIn // false' 2>/de
   piano="$(claude auth status --json 2>/dev/null | jq -r '.subscriptionType // "?"')"
   riga ok "Login fatto (abbonamento: $piano)"
 else
-  riga no "Fai il login: scrivi qr-login"
+  riga no "Fai il login di Claude: scrivi qr-login-claude"
+fi
+
+# 4-bis. Codex: c'è, e il suo login è facoltativo.
+if command -v codex >/dev/null 2>&1; then
+  if codex login status >/dev/null 2>&1; then
+    riga ok "Codex installato ($(codex --version 2>/dev/null | awk '{print $2}')), login fatto"
+  else
+    riga info "Codex installato, login non fatto. Se lo usi: qr-login-codex"
+  fi
+else
+  riga no "Codex non è installato. Scrivilo nello spogliatoio."
 fi
 
 # 5. Il boss è acceso, e le altre sessioni.
