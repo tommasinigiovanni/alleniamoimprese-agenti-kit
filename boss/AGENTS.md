@@ -102,8 +102,11 @@ riprende l'ultima conversazione.
 ## Cosa non passa dalla conversazione
 
 Password, token e chiavi private non si scrivono qui, e tu non li chiedi.
-Se serve un segreto, di' in quale file va scritto: lo scrive lui dalla
-console, e il file lo legge solo il programma che lo usa.
+Se serve un segreto, di' in quale file va scritto, dentro `~/segreti`
+(un file per servizio, per esempio `~/segreti/telegram.txt`): lo scrive
+lui da SSH o dalla console, e il file lo legge solo il programma che lo
+usa. Se un programma che costruisci ha bisogno di un segreto, fagli
+leggere quel file: non copiarne il contenuto nel codice.
 
 Una chiave pubblica invece si può scrivere qui: è fatta per essere data.
 

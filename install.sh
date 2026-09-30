@@ -88,7 +88,9 @@ utente_agente() {
   if ! id "$UTENTE" >/dev/null 2>&1; then
     useradd -m -s /bin/bash "$UTENTE" || return 1
   fi
-  passwd -l "$UTENTE" >/dev/null
+  # La password di agente non la scrive il kit: appena creato, agente non ne
+  # ha nessuna, e la sceglie lo studente da root sulla console (passwd agente).
+  # Qui non si tocca, così un install.sh rilanciato non gliela toglie.
   # L'agente non è mai amministratore.
   local gruppo
   for gruppo in sudo admin wheel; do
@@ -119,16 +121,21 @@ console_italiana() {
   setupcon --force >/dev/null 2>&1 || true
 }
 
-# SSH acceso ma chiuso: si entra solo con una chiave, solo come agente, e
-# agente all'inizio non ne ha nessuna. Da fuori la porta non si vede finché lo
+# SSH acceso sulla porta 2222, con la password: entra solo agente, con la
+# password che lo studente gli ha dato dalla console. Root da SSH non entra
+# mai, e una password vuota non vale. Da fuori la porta non si vede finché lo
 # studente non la apre nel firewall del pannello.
+# La 2222 al posto della 22 toglie il rumore dei robot che provano le password
+# su tutta la rete: non è una protezione, quella è il firewall.
 # Il nome comincia con 00: in sshd vale il primo valore letto, e cloud-init
-# scrive il suo file (50-cloud-init.conf) con le password accese.
-ssh_solo_chiave() {
+# scrive il suo file (50-cloud-init.conf) dopo.
+ssh_con_password() {
   install -d -m 755 /etc/ssh/sshd_config.d
   cat > /etc/ssh/sshd_config.d/00-agenti-kit.conf <<'FINE'
 # Kit del corso "Agenti che non dormono".
-PasswordAuthentication no
+Port 2222
+PasswordAuthentication yes
+PermitEmptyPasswords no
 KbdInteractiveAuthentication no
 PermitRootLogin no
 AllowUsers agente
@@ -142,21 +149,33 @@ FINE
   sshd -t || return 1
   local valori
   valori="$(sshd -T 2>/dev/null)"
-  printf '%s\n' "$valori" | grep -qx 'passwordauthentication no' || return 1
+  printf '%s\n' "$valori" | grep -qx 'port 2222' || return 1
+  printf '%s\n' "$valori" | grep -qx 'passwordauthentication yes' || return 1
+  printf '%s\n' "$valori" | grep -qx 'permitemptypasswords no' || return 1
   printf '%s\n' "$valori" | grep -qx 'permitrootlogin no' || return 1
+  printf '%s\n' "$valori" | grep -qx 'allowusers agente' || return 1
   [ "$SENZA_SYSTEMD" = 1 ] && return 0
   local unita
   for unita in ssh.socket ssh.service; do
     systemctl unmask "$unita" >/dev/null 2>&1 || true
   done
-  systemctl daemon-reload
-  # Su Ubuntu 24.04 il server parte dal socket, alla prima connessione.
+  # Su Ubuntu 24.04 il server parte dal socket, alla prima connessione, e il
+  # socket prende la porta da sshd_config (sshd-socket-generator). Il socket
+  # non si riavvia finché il servizio è acceso: prima si spegne tutto.
   if systemctl list-unit-files ssh.socket >/dev/null 2>&1; then
+    systemctl stop ssh.service ssh.socket >/dev/null 2>&1 || true
+    systemctl daemon-reload
     systemctl enable --now ssh.socket >/dev/null 2>&1 || return 1
   else
-    systemctl enable --now ssh.service >/dev/null 2>&1 || return 1
+    systemctl daemon-reload
+    systemctl enable ssh.service >/dev/null 2>&1 || return 1
+    systemctl restart ssh.service >/dev/null 2>&1 || return 1
   fi
-  systemctl try-restart ssh.service >/dev/null 2>&1 || true
+  # Si guarda il risultato, non la configurazione: 2222 in ascolto, 22 no.
+  local ascolto
+  ascolto="$(ss -H -ltn 2>/dev/null | awk '{print $4}')"
+  printf '%s\n' "$ascolto" | grep -qE ':2222$' || { echo "SSH non ascolta sulla 2222."; return 1; }
+  ! printf '%s\n' "$ascolto" | grep -qE ':22$' || { echo "SSH ascolta ancora sulla 22."; return 1; }
 }
 
 claude_code() {
@@ -233,6 +252,9 @@ file_agente() {
   install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/.cache"
   install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/boss"
   install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/progetti"
+  # I segreti (password, token, chiavi) stanno qui, in un file per servizio.
+  # Li scrive lo studente da SSH o dalla console, non nella conversazione.
+  install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/segreti"
   chmod 700 "$CASA"
 
   # Impostazioni: si toccano solo le chiavi del kit. Remote Control non si
@@ -278,7 +300,7 @@ file_agente() {
     echo 'umask 077' >> "$CASA/.profile"
   fi
   chown -R "$UTENTE:$UTENTE" "$CASA/.claude" "$CASA/.claude.json" "$CASA/boss" \
-    "$CASA/progetti" "$CASA/.profile" "$CASA/.tmux.conf"
+    "$CASA/progetti" "$CASA/segreti" "$CASA/.profile" "$CASA/.tmux.conf"
 }
 
 # Syncthing tiene uguale una cartella fra la macchina e il computer dello
@@ -336,7 +358,7 @@ FINE
 passo "sistema" sistema_base
 passo "utente" utente_agente
 passo "console-italiana" console_italiana
-passo "ssh" ssh_solo_chiave
+passo "ssh" ssh_con_password
 passo "claude" claude_code
 passo "codex" codex_cli
 passo "file" file_agente

@@ -66,16 +66,35 @@ jobs:
           # Il nome della sessione si deve vedere sullo schermo di Claude.
           sudo -u agente -H tmux capture-pane -p -t boss | grep -q ' boss '
           sudo -u agente -H tmux capture-pane -p -t boss | grep -q '~/boss'
-      - name: SSH acceso, solo con chiave
+      - name: SSH sulla 2222, con la password, solo agente
         if: always()
         run: |
-          sudo systemctl start ssh.service
-          sleep 2
-          systemctl is-active ssh.service
-          sudo sshd -T | grep -x 'passwordauthentication no'
+          systemctl is-active ssh.socket
+          sudo ss -H -ltn | awk '{print $4}' | grep -E ':2222$'
+          ! sudo ss -H -ltn | awk '{print $4}' | grep -E ':22$'
+          sudo sshd -T | grep -x 'port 2222'
+          sudo sshd -T | grep -x 'passwordauthentication yes'
+          sudo sshd -T | grep -x 'permitemptypasswords no'
           sudo sshd -T | grep -x 'kbdinteractiveauthentication no'
           sudo sshd -T | grep -x 'permitrootlogin no'
           sudo sshd -T | grep -x 'allowusers agente'
+      - name: Il gesto dello studente, entrare con la password
+        if: always()
+        run: |
+          sudo apt-get install -y -q sshpass > /dev/null
+          # Senza password non entra nessuno.
+          ! sshpass -p qualsiasi ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 true
+          # Lo studente sceglie la password da root, poi entra come agente.
+          echo 'agente:prova-corso-2026' | sudo chpasswd
+          sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 'whoami; ls -ld segreti'
+          # Root non entra, neanche con la password giusta.
+          echo 'root:prova-corso-2026' | sudo chpasswd
+          ! sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 root@127.0.0.1 true
+          # Sulla 22 non risponde nessuno.
+          ! ssh -p 22 -o StrictHostKeyChecking=no -o ConnectTimeout=5 -o BatchMode=yes agente@127.0.0.1 true 2>/dev/null
+          # Un install.sh rilanciato non toglie la password.
+          sudo bash /opt/agenti-kit/install.sh > /dev/null
+          sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 true
       - name: Syncthing si accende come servizio di agente e collega una cartella
         if: always()
         run: |

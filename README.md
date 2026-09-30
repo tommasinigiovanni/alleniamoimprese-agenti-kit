@@ -17,11 +17,13 @@ Alla prima accensione, come root:
    automatici.
 3. Imposta la console: tastiera italiana, e un carattere che sa disegnare il
    QR del login.
-4. Crea l'utente `agente`, senza password e senza poteri di amministratore:
-   tu e Claude lavorate con questo utente.
-5. Lascia acceso SSH, ma chiuso: si entra solo con una chiave, solo come
-   `agente`, e all'inizio `agente` non ha nessuna chiave. Root da SSH non
-   entra mai.
+4. Crea l'utente `agente`, senza poteri di amministratore: tu e Claude
+   lavorate con questo utente. La password gliela dai tu, dalla console
+   (`passwd agente`, da root): finché non c'è, da SSH non entra nessuno.
+5. Lascia acceso SSH sulla porta 2222, con la password, solo come `agente`.
+   Root da SSH non entra mai. Da fuori la porta non si vede finché non la
+   apri nel firewall del pannello. Crea `~/segreti`, la cartella dove
+   scrivi password e token: un file per servizio, leggibile solo da te.
 6. Installa tmux, git e Claude Code, dal repository firmato di Anthropic, alla
    versione con cui il corso è stato provato, con l'aggiornamento automatico
    spento. Installa anche Codex, dalla release di
@@ -50,11 +52,13 @@ Alla prima accensione, come root:
 
 - L'agente non è amministratore.
 - Il firewall del pannello resta senza ingressi: da fuori non si vede nessuna
-  porta. Chi vuole usare SSH aggiunge la sua chiave e apre la porta 22 nel
-  pannello.
-- Il kit non scrive password di root.
+  porta. Chi vuole usare SSH dà una password ad `agente` e apre la porta
+  2222 nel pannello, meglio se solo verso il proprio indirizzo. La 2222 al
+  posto della 22 toglie il rumore dei robot, non il rischio: quello lo tiene
+  fuori il firewall.
+- Il kit non scrive password: né di root né di `agente`.
 - Password, chiavi private e token non passano dalla conversazione con
-  Claude.
+  Claude: stanno in `~/segreti`, un file per servizio.
 - Il testo di cloud-init fissa l'impronta dell'archivio: la macchina esegue
   solo la versione provata.
 
@@ -95,6 +99,10 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
 - `v1.0`: il kit congelato per l'edizione che parte il 5 ottobre 2026. È la
   `v0.4.3` con la versione di Claude Code fissata a quella provata (2.1.280).
   È la versione che usano gli studenti.
+- `v1.1`: SSH sulla porta 2222 con la password di `agente`, al posto della
+  sola chiave: da Windows basta PowerShell, senza chiavi da spostare. Root
+  da SSH resta fuori. C'è `~/segreti`, la cartella per password e token.
+  Il resto è la `v1.0`.
 
 ## Per chi sviluppa il kit
 

@@ -81,20 +81,22 @@ else
   riga no "Il boss è spento. Scrivi: tmux new -s boss   poi: cd boss   poi: claude -n boss --rc (o codex)"
 fi
 
-# 6. SSH: si entra solo con una chiave.
-if grep -qx 'PasswordAuthentication no' "$SSH_KIT" 2>/dev/null &&
-   grep -qx 'PermitRootLogin no' "$SSH_KIT" 2>/dev/null; then
+# 6. SSH: sulla porta 2222, con la password, solo agente. Root non entra.
+if grep -qx 'Port 2222' "$SSH_KIT" 2>/dev/null &&
+   grep -qx 'PasswordAuthentication yes' "$SSH_KIT" 2>/dev/null &&
+   grep -qx 'PermitRootLogin no' "$SSH_KIT" 2>/dev/null &&
+   grep -qx 'AllowUsers agente' "$SSH_KIT" 2>/dev/null; then
   chiavi=0
   if [ -s "$HOME/.ssh/authorized_keys" ]; then
     chiavi="$(grep -cvE '^[[:space:]]*(#|$)' "$HOME/.ssh/authorized_keys")"
   fi
   if [ "$chiavi" -eq 0 ]; then
-    riga ok "SSH: solo con chiave. Nessuna chiave ammessa: da SSH non entra nessuno"
+    riga ok "SSH: porta 2222, con la password, solo agente. La apri nel firewall del pannello quando ti serve"
   else
-    riga ok "SSH: solo con chiave. Chiavi ammesse: $chiavi"
+    riga ok "SSH: porta 2222, con la password o con una chiave, solo agente. Chiavi ammesse: $chiavi"
   fi
 else
-  riga no "SSH accetta anche le password: non deve. Scrivilo nello spogliatoio."
+  riga no "SSH non è impostato come nel kit (porta 2222, password, solo agente). Scrivilo nello spogliatoio."
 fi
 
 # 6-bis. Syncthing: facoltativo. Serve a tenere uguale una cartella fra la
@@ -111,7 +113,7 @@ else
 fi
 
 # 7. Nessun'altra porta in ascolto verso l'esterno, TCP e UDP.
-# La 22 è quella di SSH: la apre o la chiude il firewall del pannello.
+# La 2222 è quella di SSH: la apre o la chiude il firewall del pannello.
 # Le porte di Syncthing non si contano: ne apre più d'una e cambiano, quindi
 # si riconoscono dal programma che le tiene aperte.
 # L'indirizzo può avere l'interfaccia dopo %, per esempio 127.0.0.53%lo:53.
@@ -122,7 +124,7 @@ pubbliche="$( {
     ss -H -lunp 2>/dev/null | awk '!/\(\("syncthing",/ {print "udp " $4}'
   } | sed -E 's/%[^:]*:/:/' | awk '
     $2 ~ /^(127\.[0-9.]+|\[?::1\]?|\[::ffff:127\.[0-9.]+\]):[0-9]+$/ { next }
-    $1 == "tcp" && $2 ~ /:22$/ { next }
+    $1 == "tcp" && $2 ~ /:2222$/ { next }
     $1 == "udp" && $2 ~ /:(68|546)$/ { next }
     { print $1 "/" $2 }' | paste -sd' ' -)"
 if [ -z "$pubbliche" ]; then

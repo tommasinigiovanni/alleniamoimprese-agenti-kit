@@ -54,11 +54,17 @@ controlla "l'interfaccia di syncthing resta sulla macchina" grep -q '<address>12
 controlla "syncthing è spento: lo accende lo studente" bash -c "! pgrep -x syncthing && [ ! -e $CASA/.config/systemd/user/default.target.wants/syncthing.service ]"
 controlla "il boss sa collegare una cartella" grep -q "syncthing cli config folders" "$CASA/boss/CLAUDE.md"
 controlla "il server SSH è installato" test -x /usr/sbin/sshd
-controlla "SSH: niente password" bash -c 'mkdir -p /run/sshd; sshd -T 2>/dev/null | grep -qx "passwordauthentication no"'
+controlla "SSH: sulla porta 2222" bash -c 'mkdir -p /run/sshd; sshd -T 2>/dev/null | grep -qx "port 2222"'
+controlla "SSH: con la password" bash -c 'sshd -T 2>/dev/null | grep -qx "passwordauthentication yes"'
+controlla "SSH: una password vuota non vale" bash -c 'sshd -T 2>/dev/null | grep -qx "permitemptypasswords no"'
 controlla "SSH: niente domande a tastiera" bash -c 'sshd -T 2>/dev/null | grep -qx "kbdinteractiveauthentication no"'
 controlla "SSH: root non entra" bash -c 'sshd -T 2>/dev/null | grep -qx "permitrootlogin no"'
 controlla "SSH: entra solo agente" bash -c 'sshd -T 2>/dev/null | grep -qx "allowusers agente"'
 controlla "SSH: agente non ha ancora nessuna chiave" bash -c "[ ! -s $CASA/.ssh/authorized_keys ]"
+# Appena installato agente non ha una password: gliela dà lo studente. Finché
+# non c'è, da SSH non entra nessuno.
+controlla "agente non ha ancora una password: la sceglie lo studente" bash -c '[ "$(passwd -S agente | cut -d" " -f2)" = L ]'
+controlla "la cartella dei segreti esiste, chiusa agli altri" bash -c "[ \"\$(stat -c %U:%a $CASA/segreti)\" = agente:700 ]"
 if [ -d /run/systemd/system ]; then
   controlla "SSH non è mascherato" bash -c '[ "$(systemctl is-enabled ssh.service 2>/dev/null)" != masked ] && [ "$(systemctl is-enabled ssh.socket 2>/dev/null)" != masked ]'
 fi
