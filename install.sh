@@ -26,10 +26,11 @@ IMPRONTA_CHIAVE_CLAUDE="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
 APT=(apt-get -o DPkg::Lock::Timeout=600)
 
 # Codex si scarica dalla release di OpenAI su GitHub, a versione fissata, e si
-# installa solo se l'impronta dell'archivio è quella attesa.
+# installa solo se l'impronta dell'archivio è quella attesa. Le impronte sono
+# quelle del pacchetto completo (codex-package-...), non del solo programma.
 VERSIONE_CODEX="0.159.2"
-IMPRONTA_CODEX_X86="26586b0d246d41a799b0ef8ee1add370f0fb0721b3709340f28db612381616ea"
-IMPRONTA_CODEX_ARM="472ee4d49464a4f8792bbf0162bd9ac18d7036dbc00900a03e95f715887e930f"
+IMPRONTA_CODEX_X86="9e2d29a713b94478b240dec2f10e11324cd05fad76dc43e7c639bdf8a1337a6b"
+IMPRONTA_CODEX_ARM="05a524a463cadf7e3e22c7f923539c0d0b74c3e78b1f5f1fab52e50e6fb3312f"
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "install.sh va lanciato come root."
@@ -173,19 +174,24 @@ claude_code() {
   command -v claude >/dev/null
 }
 
+# Codex va installato come pacchetto completo: il solo programma parte, ma
+# alla prima sessione si ferma con "this CLI has no complete local package".
+# Il pacchetto sta in /opt, di root; in /usr/local/bin c'è il collegamento.
 codex_cli() {
-  local architettura impronta nome temporanea
+  local architettura impronta nome temporanea destinazione
   case "$(uname -m)" in
     x86_64) architettura=x86_64; impronta="$IMPRONTA_CODEX_X86" ;;
     aarch64 | arm64) architettura=aarch64; impronta="$IMPRONTA_CODEX_ARM" ;;
     *) echo "Codex non ha una versione per questa macchina ($(uname -m))."; return 1 ;;
   esac
-  if [ "$(codex --version 2>/dev/null | awk '{print $2}')" = "$VERSIONE_CODEX" ]; then
+  destinazione="/opt/codex-$VERSIONE_CODEX"
+  if [ -x "$destinazione/bin/codex" ] && [ -f "$destinazione/codex-package.json" ] &&
+     [ "$(readlink -f /usr/local/bin/codex)" = "$destinazione/bin/codex" ]; then
     return 0
   fi
-  nome="codex-$architettura-unknown-linux-musl"
+  nome="codex-package-$architettura-unknown-linux-musl"
   temporanea="$(mktemp -d)" || return 1
-  if ! riprova curl -fsSL --max-time 600 -o "$temporanea/codex.tar.gz" \
+  if ! riprova curl -fsSL --max-time 900 -o "$temporanea/codex.tar.gz" \
       "https://github.com/openai/codex/releases/download/rust-v$VERSIONE_CODEX/$nome.tar.gz"; then
     rm -rf "$temporanea"
     return 1
@@ -195,9 +201,16 @@ codex_cli() {
     rm -rf "$temporanea"
     return 1
   fi
-  tar -xzf "$temporanea/codex.tar.gz" -C "$temporanea" --no-same-owner "$nome" || { rm -rf "$temporanea"; return 1; }
-  install -m 755 -o root -g root "$temporanea/$nome" /usr/local/bin/codex || { rm -rf "$temporanea"; return 1; }
+  rm -rf "$destinazione"
+  install -d -m 755 -o root -g root "$destinazione" || { rm -rf "$temporanea"; return 1; }
+  tar -xzf "$temporanea/codex.tar.gz" -C "$destinazione" --no-same-owner || { rm -rf "$temporanea"; return 1; }
   rm -rf "$temporanea"
+  chown -R root:root "$destinazione"
+  chmod -R go-w "$destinazione"
+  [ -x "$destinazione/bin/codex" ] && [ -f "$destinazione/codex-package.json" ] || return 1
+  # Il collegamento prende il posto del solo programma delle versioni prima.
+  rm -f /usr/local/bin/codex
+  ln -s "$destinazione/bin/codex" /usr/local/bin/codex || return 1
   [ "$(codex --version 2>/dev/null | awk '{print $2}')" = "$VERSIONE_CODEX" ]
 }
 

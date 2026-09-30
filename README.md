@@ -79,6 +79,9 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   di Claude o di Codex; il boss ha le istruzioni anche per Codex.
 - `v0.4`: c'è Syncthing, spento. Il boss sa collegare una cartella della
   macchina al computer dello studente.
+- `v0.4.1`: Codex installato come pacchetto completo: il solo programma si
+  fermava alla prima sessione. QR con il bordo più largo, leggibile anche da
+  una foto dello schermo.
 
 ## Per chi sviluppa il kit
 

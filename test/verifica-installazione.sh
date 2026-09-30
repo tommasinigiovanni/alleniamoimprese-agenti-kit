@@ -23,7 +23,11 @@ controlla "agente non è nel gruppo sudo" bash -c '! id -nG agente | tr " " "\n"
 controlla "agente non può usare sudo" bash -c '! runuser -u agente -- sudo -n true'
 controlla "claude risponde" claude --version
 controlla "codex risponde, alla versione fissata" bash -c '[ "$(codex --version | cut -d" " -f2)" = "$(sed -n "s/^VERSIONE_CODEX=\"\(.*\)\"/\1/p" /opt/agenti-kit/install.sh)" ]'
-controlla "codex è di root e non si può cambiare" bash -c '[ "$(stat -c %U:%a /usr/local/bin/codex)" = root:755 ]'
+controlla "codex è di root e non si può cambiare" bash -c '[ "$(stat -L -c %U:%a /usr/local/bin/codex)" = root:755 ] && [ -z "$(find -L /opt/codex-* -perm /022 -print -quit)" ]'
+controlla "codex è il pacchetto completo" bash -c 'test -f "$(dirname "$(dirname "$(readlink -f /usr/local/bin/codex)")")/codex-package.json"'
+# Il solo programma rispondeva a --version ma si fermava alla prima sessione:
+# qui lo si lancia davvero, come fa lo studente.
+controlla "codex apre una sessione, non si ferma con un errore" bash -c 'runuser -l agente -c "mkdir -p /tmp/prova-codex; tmux -L prova-codex kill-server 2>/dev/null; tmux -L prova-codex new-session -d -s c -x 120 -y 30 -c /tmp/prova-codex codex; sleep 10; tmux -L prova-codex capture-pane -p -t c > /tmp/prova-codex/schermo.txt; tmux -L prova-codex kill-server; pkill -u agente -f app-server; true"; grep -q "Welcome to Codex" /tmp/prova-codex/schermo.txt && ! grep -q "no complete local package" /tmp/prova-codex/schermo.txt'
 controlla "agente può lanciare codex" runuser -l agente -c "codex --version"
 controlla "la sorgente apt di Claude Code è firmata" grep -q 'signed-by=/etc/apt/keyrings/claude-code.asc' /etc/apt/sources.list.d/claude-code.list
 controlla "Remote Control non si accende da solo: lo accende lo studente" bash -c "jq -e '.remoteControlAtStartup != true' $CASA/.claude/settings.json"

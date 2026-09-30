@@ -75,7 +75,7 @@ if [ "${TERM:-}" = linux ] && [ -z "${TMUX:-}" ]; then
 fi
 
 clear 2>/dev/null || true
-qrencode -t UTF8 -m 1 "$indirizzo"
+qrencode -t UTF8 -m 3 "$indirizzo"
 echo "$indirizzo"
 echo
 echo "1. Apri l'indirizzo con il telefono: inquadra il QR, oppure scrivilo a mano."

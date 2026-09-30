@@ -70,18 +70,22 @@ if [ "${TERM:-}" = linux ] && [ -z "${TMUX:-}" ]; then
 fi
 
 # A schermo pulito, perché il QR è alto e non deve scorrere via. Senza
-# colori: la console di Linux rende male quelli di ANSIUTF8.
-righe_qr="$(qrencode -t UTF8 -m 1 "$indirizzo" | wc -l)"
+# colori: la console di Linux rende male quelli di ANSIUTF8. Il bordo chiaro
+# largo tre moduli serve a chi legge il QR da una foto dello schermo: sul
+# nero della console, con un bordo solo, il QR non viene riconosciuto.
+righe_qr="$(qrencode -t UTF8 -m 3 "$indirizzo" | wc -l)"
 righe_schermo="$(tput lines 2>/dev/null || echo 24)"
 colonne_schermo="$(tput cols 2>/dev/null || echo 80)"
 righe_indirizzo=$(( (${#indirizzo} + colonne_schermo - 1) / colonne_schermo ))
 clear 2>/dev/null || true
-qrencode -t UTF8 -m 1 "$indirizzo"
+qrencode -t UTF8 -m 3 "$indirizzo"
 echo "$indirizzo"
 if [ "$righe_schermo" -lt $((righe_qr + righe_indirizzo + 4)) ]; then
   echo "Il QR è più alto dello schermo: ingrandisci la finestra e rilancia qr-login-claude."
 fi
 echo "Inquadra il QR con il telefono e fai il login con il tuo account Claude."
+echo "Senza telefono: fotografa lo schermo dal computer e apri la foto con la pagina"
+echo "\"Login senza telefono\", che trovi nella dispensa."
 echo "La pagina ti dà un codice. Scrivilo a mano: incollato, arriva sbagliato."
 read -r -p "Il codice, poi Invio: " codice
 
