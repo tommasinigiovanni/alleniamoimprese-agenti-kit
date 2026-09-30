@@ -59,10 +59,13 @@ jobs:
       - name: Una sessione aperta a mano resta accesa
         if: always()
         run: |
-          sudo -u agente -H tmux new-session -d -s boss -c /home/agente/boss claude
+          sudo -u agente -H tmux new-session -d -s boss -x 110 -y 30 -c /home/agente/boss 'claude -n boss --rc'
           sleep 15
           sudo -u agente -H tmux has-session -t boss
           sudo -u agente -H tmux capture-pane -p -t boss | tail -n 20
+          # Il nome della sessione si deve vedere sullo schermo di Claude.
+          sudo -u agente -H tmux capture-pane -p -t boss | grep -q ' boss '
+          sudo -u agente -H tmux capture-pane -p -t boss | grep -q '~/boss'
       - name: SSH acceso, solo con chiave
         if: always()
         run: |

@@ -78,7 +78,7 @@ sessioni="$(tmux ls -F '#{session_name}' 2>/dev/null | paste -sd' ' -)"
 if tmux has-session -t '=boss' 2>/dev/null; then
   riga ok "Sessioni accese: $sessioni"
 else
-  riga no "Il boss è spento. Scrivi: tmux new -s boss   poi: cd boss   poi: claude (o codex)"
+  riga no "Il boss è spento. Scrivi: tmux new -s boss   poi: cd boss   poi: claude -n boss --rc (o codex)"
 fi
 
 # 6. SSH: si entra solo con una chiave.

@@ -24,8 +24,11 @@ Quando ti chiede di aprire una sessione nuova:
    `preventivi`.
 2. Controlla che non ci sia già: `tmux ls`.
 3. Crea la cartella: `mkdir -p ~/progetti/NOME`.
-4. Apri la sessione, con Remote Control acceso:
-   `tmux new-session -d -s NOME -c ~/progetti/NOME 'claude --remote-control "NOME"'`
+4. Apri la sessione, con il suo nome e con Remote Control acceso:
+   `tmux new-session -d -s NOME -c ~/progetti/NOME 'claude -n NOME --rc'`
+   Il nome è lo stesso tre volte: la sessione di tmux, la cartella, la
+   sessione di Claude. Così il proprietario la ritrova con lo stesso nome
+   dappertutto, anche nell'app.
 5. Aspetta cinque secondi e guarda il suo schermo:
    `tmux capture-pane -p -t NOME`.
 6. Se lo schermo chiede se fidarsi della cartella ("Is this a project you
@@ -89,9 +92,19 @@ restano cifrati da un capo all'altro.
 
 ## Dopo un riavvio della macchina
 
-Le sessioni di tmux non sopravvivono a un riavvio. I file sì. Le sessioni
-di progetto si riaprono come sopra, e in ognuna `claude --continue`
-riprende l'ultima conversazione.
+Le sessioni di tmux non sopravvivono a un riavvio. I file e le
+conversazioni sì. Una sessione di progetto si riapre riprendendola per
+nome, dalla sua cartella:
+`tmux new-session -d -s NOME -c ~/progetti/NOME 'claude -r NOME --rc'`
+
+Poi guarda il suo schermo. Se dice che nessuna sessione ha quel nome
+("No sessions match"), chiudi quella finestra con
+`tmux kill-session -t NOME` e riaprila con `claude --continue --rc` al
+posto di `claude -r NOME --rc`: riprende l'ultima conversazione di quella
+cartella.
+
+Tu sei la sessione `boss`: ti chiami così perché il proprietario ti ha
+lanciato con `claude -n boss --rc`, dalla cartella `~/boss`.
 
 ## Cosa non passa dalla conversazione
 

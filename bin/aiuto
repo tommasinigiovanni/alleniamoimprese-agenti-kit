@@ -19,7 +19,8 @@ I comandi chiave:
   tmux ls               elenca le sessioni accese
   cd                    torna alla cartella di partenza
   cd boss               da lì, entra nella cartella del boss
-  claude                lancia Claude nella cartella dove sei
+  claude -n boss --rc   lancia Claude, lo chiama "boss", lo collega al telefono
+  claude -r boss --rc   riprende il boss, per esempio dopo un riavvio
   codex                 lancia Codex nella cartella dove sei
 
 Dentro tmux: Ctrl+B e poi D per uscire lasciando tutto acceso.

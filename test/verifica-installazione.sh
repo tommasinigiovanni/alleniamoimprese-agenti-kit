@@ -64,6 +64,8 @@ fi
 # istante: si ricontrolla dopo tre secondi prima di dare errore.
 controlla "i file di agente sono di agente" bash -c "[ -z \"\$(find $CASA -not -user agente -print -quit)\" ] || { sleep 3; [ -z \"\$(find $CASA -not -user agente -print -quit)\" ]; }"
 controlla "il boss ha le sue istruzioni" grep -q "tmux new-session" "$CASA/boss/CLAUDE.md"
+controlla "il boss dà un nome alle sessioni che apre" grep -q "claude -n NOME --rc" "$CASA/boss/CLAUDE.md"
+controlla "il promemoria lancia il boss con il suo nome" grep -q "claude -n boss --rc" /usr/local/bin/aiuto
 controlla "il boss ha le istruzioni anche per Codex" grep -q "tmux new-session" "$CASA/boss/AGENTS.md"
 controlla "niente Bun e niente plugin Telegram" bash -c "[ ! -e $CASA/.bun ] && [ ! -e $CASA/.claude/plugins ]"
 controlla "i comandi sono in /usr/local/bin" bash -c 'for c in salute qr-login-claude qr-login-codex aiuto; do [ -x /usr/local/bin/$c ] || exit 1; done'

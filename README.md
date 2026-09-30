@@ -88,6 +88,9 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
 - `v0.4.2`: `qr-login-claude` accetta il codice del login trasformato in sole
   lettere e numeri dalla pagina "Login senza telefono": incollato così com'è,
   in console arrivava rovinato.
+- `v0.4.3`: le sessioni hanno un nome. Il boss si lancia con
+  `claude -n boss --rc` e si riprende con `claude -r boss --rc`; le sessioni
+  di progetto che apre il boss prendono il nome del progetto.
 
 ## Per chi sviluppa il kit
 
