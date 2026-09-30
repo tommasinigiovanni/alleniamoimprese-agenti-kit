@@ -70,7 +70,7 @@ sistema_base() {
   riprova "${APT[@]}" update -q || return 1
   riprova "${APT[@]}" install -y -q tmux git qrencode jq unzip curl ca-certificates \
     gnupg tzdata unattended-upgrades iproute2 openssh-server \
-    kbd console-setup keyboard-configuration || return 1
+    kbd console-setup keyboard-configuration syncthing procps || return 1
   if ! timedatectl set-timezone Europe/Rome 2>/dev/null; then
     ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime
     echo Europe/Rome > /etc/timezone
@@ -255,6 +255,28 @@ file_agente() {
     "$CASA/progetti" "$CASA/.profile" "$CASA/.tmux.conf"
 }
 
+# Syncthing tiene uguale una cartella fra la macchina e il computer dello
+# studente, senza servizi in mezzo. Il kit lo lascia spento e pronto: crea
+# l'identità della macchina, senza cartelle, e spegne le segnalazioni
+# automatiche a chi sviluppa Syncthing. Accenderlo e collegare una cartella lo
+# fa lo studente, chiedendolo al boss.
+syncthing_pronto() {
+  local configurazione="$CASA/.local/state/syncthing/config.xml"
+  command -v syncthing >/dev/null || return 1
+  if [ ! -s "$configurazione" ]; then
+    runuser -l "$UTENTE" -c 'syncthing generate --no-default-folder' >/dev/null 2>&1 || return 1
+  fi
+  [ -s "$configurazione" ] || return 1
+  sed -i 's|<urAccepted>[^<]*</urAccepted>|<urAccepted>-1</urAccepted>|;
+          s|<crashReportingEnabled>[^<]*</crashReportingEnabled>|<crashReportingEnabled>false</crashReportingEnabled>|' \
+    "$configurazione" || return 1
+  grep -q '<urAccepted>-1</urAccepted>' "$configurazione" || return 1
+  grep -q '<crashReportingEnabled>false</crashReportingEnabled>' "$configurazione" || return 1
+  # L'interfaccia di Syncthing deve restare sulla sola macchina.
+  grep -q '<address>127.0.0.1:8384</address>' "$configurazione" || return 1
+  chown -R "$UTENTE:$UTENTE" "$CASA/.local"
+}
+
 comandi() {
   local comando
   for comando in "$KIT_DIR"/bin/*; do
@@ -292,6 +314,7 @@ passo "ssh" ssh_solo_chiave
 passo "claude" claude_code
 passo "codex" codex_cli
 passo "file" file_agente
+passo "syncthing" syncthing_pronto
 passo "comandi" comandi
 passo "sessioni" sessioni_che_restano
 passo "console" console_tty1

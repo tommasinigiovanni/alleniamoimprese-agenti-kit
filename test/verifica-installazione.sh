@@ -40,6 +40,13 @@ controlla "carattere della console con i mezzi blocchi" bash -c 'grep -qx "FONTF
 controlla "il carattere VGA 8x14 ha i mezzi blocchi del QR" bash -c 'zcat /usr/share/consolefonts/Uni2-VGA14.psf.gz > /tmp/carattere.psf && psfgettable /tmp/carattere.psf | grep -qi "U+2580" && psfgettable /tmp/carattere.psf | grep -qi "U+2584"'
 controlla "tastiera e carattere salvati per i prossimi avvii" bash -c 'ls /etc/console-setup/cached_*.kmap.gz && ls /etc/console-setup/cached_Uni2-VGA14.psf.gz'
 controlla "il promemoria non usa la tilde" bash -c '! grep -q "~" /usr/local/bin/aiuto'
+controlla "syncthing installato" command -v syncthing
+controlla "syncthing ha l'identità della macchina" test -s "$CASA/.local/state/syncthing/cert.pem"
+controlla "syncthing parte senza cartelle" bash -c "! grep -q '<folder id=\"[^\"]' $CASA/.local/state/syncthing/config.xml"
+controlla "syncthing non manda segnalazioni automatiche" bash -c "grep -q '<urAccepted>-1</urAccepted>' $CASA/.local/state/syncthing/config.xml && grep -q '<crashReportingEnabled>false</crashReportingEnabled>' $CASA/.local/state/syncthing/config.xml"
+controlla "l'interfaccia di syncthing resta sulla macchina" grep -q '<address>127.0.0.1:8384</address>' "$CASA/.local/state/syncthing/config.xml"
+controlla "syncthing è spento: lo accende lo studente" bash -c "! pgrep -x syncthing && [ ! -e $CASA/.config/systemd/user/default.target.wants/syncthing.service ]"
+controlla "il boss sa collegare una cartella" grep -q "syncthing cli config folders" "$CASA/boss/CLAUDE.md"
 controlla "il server SSH è installato" test -x /usr/sbin/sshd
 controlla "SSH: niente password" bash -c 'mkdir -p /run/sshd; sshd -T 2>/dev/null | grep -qx "passwordauthentication no"'
 controlla "SSH: niente domande a tastiera" bash -c 'sshd -T 2>/dev/null | grep -qx "kbdinteractiveauthentication no"'

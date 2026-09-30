@@ -97,18 +97,35 @@ else
   riga no "SSH accetta anche le password: non deve. Scrivilo nello spogliatoio."
 fi
 
+# 6-bis. Syncthing: facoltativo. Serve a tenere uguale una cartella fra la
+# macchina e il computer.
+syncthing_acceso=no
+if pgrep -u "$UTENTE" -x syncthing >/dev/null 2>&1; then
+  syncthing_acceso=si
+  cartelle="$(syncthing cli config folders list 2>/dev/null | sed '/^$/d' | paste -sd' ' -)"
+  if [ -n "$cartelle" ]; then
+    riga ok "Syncthing acceso. Cartelle collegate: $cartelle"
+  else
+    riga ok "Syncthing acceso. Nessuna cartella collegata"
+  fi
+else
+  riga info "Syncthing spento. Serve per collegare una cartella al tuo computer: chiedilo al boss"
+fi
+
 # 7. Nessun'altra porta in ascolto verso l'esterno, TCP e UDP.
 # La 22 è quella di SSH: la apre o la chiude il firewall del pannello.
+# La 22000 e la 21027 sono di Syncthing, quando è acceso.
 # L'indirizzo può avere l'interfaccia dopo %, per esempio 127.0.0.53%lo:53.
 # In UDP restano fuori le porte dei client DHCP (68 e 546), che non accettano
 # connessioni.
 pubbliche="$( {
     ss -H -ltn 2>/dev/null | awk '{print "tcp " $4}'
     ss -H -lun 2>/dev/null | awk '{print "udp " $4}'
-  } | sed -E 's/%[^:]*:/:/' | awk '
+  } | sed -E 's/%[^:]*:/:/' | awk -v sync="$syncthing_acceso" '
     $2 ~ /^(127\.[0-9.]+|\[?::1\]?|\[::ffff:127\.[0-9.]+\]):[0-9]+$/ { next }
     $1 == "tcp" && $2 ~ /:22$/ { next }
     $1 == "udp" && $2 ~ /:(68|546)$/ { next }
+    sync == "si" && $2 ~ /:(22000|21027)$/ { next }
     { print $1 "/" $2 }' | paste -sd' ' -)"
 if [ -z "$pubbliche" ]; then
   riga ok "Nessun'altra porta in ascolto verso l'esterno"

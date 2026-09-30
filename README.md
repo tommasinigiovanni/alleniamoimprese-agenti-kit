@@ -25,10 +25,12 @@ Alla prima accensione, come root:
 6. Installa tmux, git e Claude Code, dal repository firmato di Anthropic, con
    l'aggiornamento automatico spento. Installa anche Codex, dalla release di
    OpenAI su GitHub, a versione fissata e con l'impronta controllata.
-7. Crea `~/boss`, la cartella della prima sessione, con le sue istruzioni:
+7. Installa Syncthing e lo lascia spento: serve a tenere uguale una cartella
+   fra la macchina e il tuo computer, senza servizi in mezzo.
+8. Crea `~/boss`, la cartella della prima sessione, con le sue istruzioni:
    `CLAUDE.md` per Claude e `AGENTS.md` per Codex. E `~/progetti` per le
    altre sessioni.
-8. Sulla console entra da solo come `agente` e mostra il promemoria dei
+9. Sulla console entra da solo come `agente` e mostra il promemoria dei
    comandi.
 
 ## I comandi del kit
@@ -75,6 +77,8 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   `qr-login-codex`.
 - `v0.3.1`: si può seguire anche con il solo Codex. `salute` chiede un login,
   di Claude o di Codex; il boss ha le istruzioni anche per Codex.
+- `v0.4`: c'è Syncthing, spento. Il boss sa collegare una cartella della
+  macchina al computer dello studente.
 
 ## Per chi sviluppa il kit
 

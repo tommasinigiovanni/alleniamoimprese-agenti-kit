@@ -73,6 +73,21 @@ jobs:
           sudo sshd -T | grep -x 'kbdinteractiveauthentication no'
           sudo sshd -T | grep -x 'permitrootlogin no'
           sudo sshd -T | grep -x 'allowusers agente'
+      - name: Syncthing si accende come servizio di agente e collega una cartella
+        if: always()
+        run: |
+          uid="$(id -u agente)"
+          come() { sudo -u agente -H env XDG_RUNTIME_DIR="/run/user/$uid" "$@"; }
+          prima="$(come syncthing --device-id)"
+          come systemctl --user enable --now syncthing.service
+          sleep 8
+          come systemctl --user is-active syncthing.service
+          come syncthing cli config folders add --id prova --label prova --path /home/agente/progetti/prova
+          come syncthing cli config folders list | grep -x prova
+          test "$prima" = "$(come syncthing --device-id)"
+          ss -ltn | grep -q '127.0.0.1:8384'
+          sudo -u agente -H bash -lc 'salute' | grep 'Syncthing acceso. Cartelle collegate: prova'
+          sudo -u agente -H bash -lc 'salute' | grep -q "Nessun'altra porta in ascolto verso l'esterno"
       - name: salute come agente, senza login
         if: always()
         run: sudo -u agente -H bash -lc 'salute' || true
