@@ -27,7 +27,7 @@ if [ "\$1 \$2" = "auth login" ]; then
   echo "If the browser didn't open, visit: $indirizzo"
   printf 'Paste code here if prompted > '
   read -r codice
-  if [ "\$codice" = "$codice_giusto" ]; then
+  if [ "\$codice" = "\$(cat "$TMUX_TMPDIR/codice-giusto")" ]; then
     touch "\$fatto"
     echo "Login successful."
     exit 0
@@ -37,6 +37,7 @@ if [ "\$1 \$2" = "auth login" ]; then
 fi
 FINE
 chmod 755 "$TMUX_TMPDIR/bin/claude"
+printf '%s' "$codice_giusto" > "$TMUX_TMPDIR/codice-giusto"
 PATH="$TMUX_TMPDIR/bin:$PATH"
 export PATH
 
@@ -81,5 +82,39 @@ controlla "la sessione del login si chiude alla fine" sessione_chiusa
 
 uscita="$(bash "$RADICE/bin/qr-login-claude" < /dev/null)" || true
 controlla "a login fatto, non chiede niente" contiene "$uscita" "già fatto"
+
+# Il codice trasformato dalla pagina "Login senza telefono": sole lettere e
+# numeri. È lo stesso codice di sopra, abc123#stato456.
+trasformato="zzmfrggmjsgmrxg5dborxtinjw29ad"
+rm -f "$TMUX_TMPDIR/login-fatto"
+riuscito=0
+uscita="$(printf '%s\n' "$trasformato" | bash "$RADICE/bin/qr-login-claude")" || riuscito=$?
+controlla "codice trasformato: il login riesce" test "$riuscito" -eq 0
+controlla "codice trasformato: lo dice" contiene "$uscita" "Login fatto"
+
+# Lo stesso, con una lettera persa nell'incolla: deve accorgersene e chiedere
+# di nuovo, senza mandare a Claude un codice sbagliato. Alla seconda riga
+# arriva quello giusto.
+rovinato="zzmfrggmjsgmrxg5dborxtinj29ad"
+rm -f "$TMUX_TMPDIR/login-fatto"
+riuscito=0
+uscita="$(printf '%s\n%s\n' "$rovinato" "$trasformato" | bash "$RADICE/bin/qr-login-claude")" || riuscito=$?
+controlla "codice rovinato: se ne accorge" contiene "$uscita" "arrivato rovinato"
+controlla "codice rovinato: poi accetta quello giusto" test "$riuscito" -eq 0
+
+# Un codice lungo, con trattini, trattini bassi e cancelletto, come quello vero.
+lungo='K7f_2Xq-9LmN0pQrStUvWxYz_-AbCdEfGhIjKlMnOpQrStUv#aB3_dE-fG7hIjK1LmN0pQrStUvWxYz_-0123456789AbC'
+lungo_trasformato="zzjm3wmxzslbys2okmnvhda4crojjxivlwk54fs6s7fvaweq3eivteo2cjnjfwytloj5yfc4storkxmi3biizv6zcffvteon3ijfvewmkmnvhda4crojjxivlwk54fs6s7fuydcmrtgq2tmnzyhfaweqy7993"
+printf '%s' "$lungo" > "$TMUX_TMPDIR/codice-giusto"
+rm -f "$TMUX_TMPDIR/login-fatto"
+riuscito=0
+uscita="$(printf '%s\n' "$lungo_trasformato" | bash "$RADICE/bin/qr-login-claude")" || riuscito=$?
+controlla "codice lungo trasformato: il login riesce" test "$riuscito" -eq 0
+
+# Lo stesso codice lungo, scritto a mano così com'è.
+rm -f "$TMUX_TMPDIR/login-fatto"
+riuscito=0
+uscita="$(printf '%s\n' "$lungo" | bash "$RADICE/bin/qr-login-claude")" || riuscito=$?
+controlla "codice lungo scritto a mano: il login riesce" test "$riuscito" -eq 0
 
 exit "$errori"

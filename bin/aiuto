@@ -25,7 +25,8 @@ I comandi chiave:
 Dentro tmux: Ctrl+B e poi D per uscire lasciando tutto acceso.
 Se Ctrl+B non passa, Ctrl+A e poi D.
 
-In console si scrive a mano: il testo incollato arriva sbagliato.
+In console si scrive a mano. Il testo incollato arriva sbagliato nei simboli:
+passano bene solo lettere e numeri.
 
 Non sai cosa fa un comando? Chiedilo a Claude prima di lanciarlo.
 

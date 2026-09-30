@@ -36,8 +36,11 @@ Alla prima accensione, come root:
 ## I comandi del kit
 
 - `salute`: controlla che la macchina sia a posto, una riga per controllo.
-- `qr-login-claude`: il login di Claude con il telefono. Mostra un QR e
-  sotto l'indirizzo per intero, aspetta il codice e lo passa a Claude.
+- `qr-login-claude`: il login di Claude. Mostra un QR e sotto l'indirizzo per
+  intero, aspetta il codice e lo passa a Claude. Il QR si inquadra con il
+  telefono, oppure si fotografa dal computer e si apre con la pagina
+  https://claude.ai/artifact/GTNLnb5i1Xqi7F9bD16q9U, che prepara anche il
+  codice da incollare.
 - `qr-login-codex`: il login di Codex con il telefono. Mostra un QR, un
   indirizzo corto e un codice da scrivere nella pagina.
 - `aiuto`: il promemoria dei comandi.
@@ -82,6 +85,9 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
 - `v0.4.1`: Codex installato come pacchetto completo: il solo programma si
   fermava alla prima sessione. QR con il bordo più largo, leggibile anche da
   una foto dello schermo.
+- `v0.4.2`: `qr-login-claude` accetta il codice del login trasformato in sole
+  lettere e numeri dalla pagina "Login senza telefono": incollato così com'è,
+  in console arrivava rovinato.
 
 ## Per chi sviluppa il kit
 

@@ -19,6 +19,38 @@ set -uo pipefail
 SOCKET=agenti-login
 SESSIONE=login
 CARATTERE=Uni2-VGA14
+PAGINA="claude.ai/artifact/GTNLnb5i1Xqi7F9bD16q9U"
+
+# Fletcher-16 sui byte che arrivano: quattro cifre esadecimali.
+somma_controllo() {
+  local a=0 b=0 n
+  for n in $(od -An -v -tu1); do
+    a=$(( (a + n) % 255 ))
+    b=$(( (b + a) % 255 ))
+  done
+  printf '%02x%02x' "$b" "$a"
+}
+
+# Il codice del login può arrivare in due forme. Così com'è, scritto a mano.
+# Oppure trasformato dalla pagina "Login senza telefono" in sole lettere
+# minuscole e numeri, le uniche cose che l'incolla della console non rovina:
+# "zz", il codice in base32, e quattro cifre di controllo.
+# Stampa il codice vero. Esce con 2 se la forma trasformata è arrivata rovinata.
+leggi_codice() {
+  local grezzo corpo controllo testo
+  grezzo="$(printf '%s' "$1" | tr -d '[:space:]')"
+  if [[ "$grezzo" =~ ^zz([a-z2-7]+)([0-9a-f]{4})$ ]]; then
+    corpo="${BASH_REMATCH[1]}"
+    controllo="${BASH_REMATCH[2]}"
+    while [ $(( ${#corpo} % 8 )) -ne 0 ]; do corpo="$corpo="; done
+    testo="$(printf '%s' "$corpo" | tr '[:lower:]' '[:upper:]' | base32 -d 2>/dev/null)" || return 2
+    [ -n "$testo" ] || return 2
+    [ "$(printf '%s' "$testo" | somma_controllo)" = "$controllo" ] || return 2
+    printf '%s' "$testo"
+    return 0
+  fi
+  printf '%s' "$grezzo"
+}
 
 login_fatto() {
   [ "$(claude auth status --json 2>/dev/null | jq -r '.loggedIn // false' 2>/dev/null)" = true ]
@@ -83,14 +115,25 @@ echo "$indirizzo"
 if [ "$righe_schermo" -lt $((righe_qr + righe_indirizzo + 4)) ]; then
   echo "Il QR è più alto dello schermo: ingrandisci la finestra e rilancia qr-login-claude."
 fi
-echo "Inquadra il QR con il telefono e fai il login con il tuo account Claude."
-echo "Senza telefono: fotografa lo schermo dal computer e apri la foto con la pagina"
-echo "\"Login senza telefono\", che trovi nella dispensa."
-echo "La pagina ti dà un codice. Scrivilo a mano: incollato, arriva sbagliato."
-read -r -p "Il codice, poi Invio: " codice
+echo "Dal computer: fotografa questo QR e incollalo nella pagina $PAGINA"
+echo "  Fai il login, incolla nella stessa pagina il codice che ricevi, e incolla qui il risultato."
+echo "Dal telefono: inquadra il QR, fai il login, e scrivi qui a mano il codice che ricevi."
 
+codice=""
+for _ in 1 2 3 4 5; do
+  read -r -p "Il codice, poi Invio: " scritto
+  if [ -z "$scritto" ]; then
+    echo "Nessun codice scritto: il login non è stato fatto. Rilancia qr-login-claude."
+    exit 1
+  fi
+  if codice="$(leggi_codice "$scritto")"; then
+    break
+  fi
+  codice=""
+  echo "Il codice è arrivato rovinato: nell'incolla si è perso qualcosa. Incollalo di nuovo."
+done
 if [ -z "$codice" ]; then
-  echo "Nessun codice scritto: il login non è stato fatto. Rilancia qr-login-claude."
+  echo "Non ci siamo riusciti. Rilancia qr-login-claude, oppure scrivi il codice a mano."
   exit 1
 fi
 
