@@ -53,6 +53,7 @@ fi
 # istante: si ricontrolla dopo tre secondi prima di dare errore.
 controlla "i file di agente sono di agente" bash -c "[ -z \"\$(find $CASA -not -user agente -print -quit)\" ] || { sleep 3; [ -z \"\$(find $CASA -not -user agente -print -quit)\" ]; }"
 controlla "il boss ha le sue istruzioni" grep -q "tmux new-session" "$CASA/boss/CLAUDE.md"
+controlla "il boss ha le istruzioni anche per Codex" grep -q "tmux new-session" "$CASA/boss/AGENTS.md"
 controlla "niente Bun e niente plugin Telegram" bash -c "[ ! -e $CASA/.bun ] && [ ! -e $CASA/.claude/plugins ]"
 controlla "i comandi sono in /usr/local/bin" bash -c 'for c in salute qr-login-claude qr-login-codex aiuto; do [ -x /usr/local/bin/$c ] || exit 1; done'
 controlla "i comandi della v0.1 non ci sono" bash -c 'for c in agenti-menu salute-base riavvia-claude avvia-claude qr-login; do [ ! -e /usr/local/bin/$c ] || exit 1; done'

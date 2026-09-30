@@ -32,6 +32,8 @@ jobs:
           sudo apt-get install -y -q tmux qrencode jq > /dev/null
           bash test/prova-qr-login.sh
           bash test/prova-qr-login-codex.sh
+      - name: salute, le righe del login
+        run: bash test/prova-salute-login.sh
 
   installazione:
     strategy:

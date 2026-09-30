@@ -25,8 +25,9 @@ Alla prima accensione, come root:
 6. Installa tmux, git e Claude Code, dal repository firmato di Anthropic, con
    l'aggiornamento automatico spento. Installa anche Codex, dalla release di
    OpenAI su GitHub, a versione fissata e con l'impronta controllata.
-7. Crea `~/boss`, la cartella della prima sessione di Claude, con le sue
-   istruzioni in `CLAUDE.md`, e `~/progetti` per le altre.
+7. Crea `~/boss`, la cartella della prima sessione, con le sue istruzioni:
+   `CLAUDE.md` per Claude e `AGENTS.md` per Codex. E `~/progetti` per le
+   altre sessioni.
 8. Sulla console entra da solo come `agente` e mostra il promemoria dei
    comandi.
 
@@ -72,6 +73,8 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   niente `~` nei comandi da scrivere.
 - `v0.3`: c'è anche Codex. `qr-login` diventa `qr-login-claude`, e arriva
   `qr-login-codex`.
+- `v0.3.1`: si può seguire anche con il solo Codex. `salute` chiede un login,
+  di Claude o di Codex; il boss ha le istruzioni anche per Codex.
 
 ## Per chi sviluppa il kit
 

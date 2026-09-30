@@ -231,9 +231,13 @@ file_agente() {
   chmod 600 "$configurazione"
 
   # Le istruzioni del boss. Se lo studente le ha già cambiate, restano le sue.
-  if [ ! -e "$CASA/boss/CLAUDE.md" ]; then
-    install -m 600 "$KIT_DIR/boss/CLAUDE.md" "$CASA/boss/CLAUDE.md" || return 1
-  fi
+  # CLAUDE.md lo legge Claude, AGENTS.md lo legge Codex.
+  local istruzioni
+  for istruzioni in CLAUDE.md AGENTS.md; do
+    if [ ! -e "$CASA/boss/$istruzioni" ]; then
+      install -m 600 "$KIT_DIR/boss/$istruzioni" "$CASA/boss/$istruzioni" || return 1
+    fi
+  done
 
   # Ctrl+B è la combinazione di tmux. Ctrl+A è la seconda, se nella console
   # del pannello la prima non passa.
