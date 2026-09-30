@@ -21,6 +21,10 @@ SENZA_SYSTEMD="${AGENTI_SENZA_SYSTEMD:-0}"
 # Impronta della chiave di firma di Claude Code, pubblicata da Anthropic nella
 # documentazione di installazione (code.claude.com/docs/en/setup).
 IMPRONTA_CHIAVE_CLAUDE="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
+# La versione di Claude Code con cui il corso è stato provato. Il repository
+# di Anthropic tiene anche le versioni vecchie: si installa questa, e la si
+# blocca, così la macchina di ogni studente è uguale a quella provata.
+VERSIONE_CLAUDE="2.1.280-1"
 # Nei primi minuti di una macchina nuova gli aggiornamenti automatici di Ubuntu
 # tengono occupato apt: si aspetta che lo liberino, fino a dieci minuti.
 APT=(apt-get -o DPkg::Lock::Timeout=600)
@@ -170,7 +174,16 @@ claude_code() {
   echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" \
     > /etc/apt/sources.list.d/claude-code.list
   riprova "${APT[@]}" update -q || return 1
-  DEBIAN_FRONTEND=noninteractive riprova "${APT[@]}" install -y -q claude-code || return 1
+  # La si sblocca prima di installare: serve quando install.sh gira di nuovo.
+  apt-mark unhold claude-code >/dev/null 2>&1 || true
+  if ! DEBIAN_FRONTEND=noninteractive riprova "${APT[@]}" install -y -q --allow-downgrades \
+      "claude-code=$VERSIONE_CLAUDE"; then
+    # Meglio una macchina che funziona con una versione più nuova che una
+    # macchina senza Claude: si prende l'ultima, e resta scritto nel registro.
+    echo "!!! La versione $VERSIONE_CLAUDE di Claude Code non si installa: prendo l'ultima."
+    DEBIAN_FRONTEND=noninteractive riprova "${APT[@]}" install -y -q claude-code || return 1
+  fi
+  apt-mark hold claude-code >/dev/null 2>&1 || true
   command -v claude >/dev/null
 }
 

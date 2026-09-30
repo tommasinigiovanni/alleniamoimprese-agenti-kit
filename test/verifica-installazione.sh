@@ -22,6 +22,8 @@ controlla "l'utente agente esiste" id agente
 controlla "agente non è nel gruppo sudo" bash -c '! id -nG agente | tr " " "\n" | grep -qxE "sudo|admin|wheel"'
 controlla "agente non può usare sudo" bash -c '! runuser -u agente -- sudo -n true'
 controlla "claude risponde" claude --version
+controlla "claude è alla versione provata" bash -c '[ "$(claude --version | cut -d" " -f1)-1" = "$(sed -n "s/^VERSIONE_CLAUDE=\"\(.*\)\"/\1/p" /opt/agenti-kit/install.sh)" ]'
+controlla "la versione di claude è bloccata" bash -c 'apt-mark showhold | grep -qx claude-code'
 controlla "codex risponde, alla versione fissata" bash -c '[ "$(codex --version | cut -d" " -f2)" = "$(sed -n "s/^VERSIONE_CODEX=\"\(.*\)\"/\1/p" /opt/agenti-kit/install.sh)" ]'
 controlla "codex è di root e non si può cambiare" bash -c '[ "$(stat -L -c %U:%a /usr/local/bin/codex)" = root:755 ] && [ -z "$(find -L /opt/codex-* -perm /022 -print -quit)" ]'
 controlla "codex è il pacchetto completo" bash -c 'test -f "$(dirname "$(dirname "$(readlink -f /usr/local/bin/codex)")")/codex-package.json"'

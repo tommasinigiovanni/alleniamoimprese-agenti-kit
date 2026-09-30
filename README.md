@@ -22,8 +22,9 @@ Alla prima accensione, come root:
 5. Lascia acceso SSH, ma chiuso: si entra solo con una chiave, solo come
    `agente`, e all'inizio `agente` non ha nessuna chiave. Root da SSH non
    entra mai.
-6. Installa tmux, git e Claude Code, dal repository firmato di Anthropic, con
-   l'aggiornamento automatico spento. Installa anche Codex, dalla release di
+6. Installa tmux, git e Claude Code, dal repository firmato di Anthropic, alla
+   versione con cui il corso è stato provato, con l'aggiornamento automatico
+   spento. Installa anche Codex, dalla release di
    OpenAI su GitHub, a versione fissata e con l'impronta controllata.
 7. Installa Syncthing e lo lascia spento: serve a tenere uguale una cartella
    fra la macchina e il tuo computer, senza servizi in mezzo.
@@ -91,6 +92,9 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
 - `v0.4.3`: le sessioni hanno un nome. Il boss si lancia con
   `claude -n boss --rc` e si riprende con `claude -r boss --rc`; le sessioni
   di progetto che apre il boss prendono il nome del progetto.
+- `v1.0`: il kit congelato per l'edizione che parte il 5 ottobre 2026. È la
+  `v0.4.3` con la versione di Claude Code fissata a quella provata (2.1.280).
+  È la versione che usano gli studenti.
 
 ## Per chi sviluppa il kit
 
