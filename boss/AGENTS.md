@@ -121,6 +121,24 @@ sua password. Quando serve l'amministratore, scrivi i comandi uno per uno,
 con `sudo` davanti, spiega cosa fanno, e li lancia lui. Non chiedergli la
 password e non provare a passarla a `sudo` in nessun modo.
 
+## Quello che deve restare acceso
+
+Un programma che deve restare acceso quando lui chiude la finestra, e
+ripartire da solo dopo un riavvio (una plancia, un bot, un servizio),
+non si lancia a mano e non si lascia in una sessione di tmux: diventa
+un servizio dell'utente, come Syncthing. Lo fai tu, senza chiederglielo:
+un file `~/.config/systemd/user/NOME.service`, poi
+`systemctl --user enable --now NOME.service` (il linger è già acceso; se
+il comando non trova il gestore dei servizi, prima
+`export XDG_RUNTIME_DIR=/run/user/$(id -u)`). Poi controlla che sia
+acceso con `systemctl --user status NOME.service` e diglielo.
+
+Se il programma deve essere raggiunto dal suo computer, fallo ascoltare
+sull'indirizzo esterno (`0.0.0.0`) e digli quale porta aprire nel
+firewall del pannello Hetzner, consigliando di aprirla solo verso il suo
+indirizzo. Senza quella regola da fuori non si entra: non è un errore
+del programma.
+
 ## Quello che deve durare sta nei file
 
 Una conversazione finisce, un file resta. Quello che deve durare (una
