@@ -17,9 +17,12 @@ Alla prima accensione, come root:
    automatici.
 3. Imposta la console: tastiera italiana, e un carattere che sa disegnare il
    QR del login.
-4. Crea l'utente `agente`, senza poteri di amministratore: tu e Claude
-   lavorate con questo utente. La password gliela dai tu, dalla console
-   (`passwd agente`, da root): finché non c'è, da SSH non entra nessuno.
+4. Crea l'utente `agente`: tu e Claude lavorate con questo utente. La
+   password gliela dai tu, dalla console (`passwd agente`, da root):
+   finché non c'è, da SSH non entra nessuno. Con la sua password `agente`
+   diventa amministratore via `sudo`; Claude, che non ha un terminale e
+   non conosce la password, no. Installa anche `python3-venv`, per i
+   programmi Python con le loro librerie.
 5. Lascia acceso SSH sulla porta 2222, con la password, solo come `agente`.
    Root da SSH non entra mai. Da fuori la porta non si vede finché non la
    apri nel firewall del pannello. Crea `~/segreti`, la cartella dove
@@ -50,7 +53,9 @@ Alla prima accensione, come root:
 
 ## Scelte di sicurezza
 
-- L'agente non è amministratore.
+- Claude non è amministratore. `agente` lo diventa solo con la sua
+  password, da un terminale: `sudo` senza password non passa, e il
+  permesso vale solo sul terminale che l'ha data, per cinque minuti.
 - Il firewall del pannello resta senza ingressi: da fuori non si vede nessuna
   porta. Chi vuole usare SSH dà una password ad `agente` e apre la porta
   2222 nel pannello, meglio se solo verso il proprio indirizzo. La 2222 al
@@ -103,6 +108,9 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   sola chiave: da Windows basta PowerShell, senza chiavi da spostare. Root
   da SSH resta fuori. C'è `~/segreti`, la cartella per password e token.
   Il resto è la `v1.0`.
+- `v1.2`: `agente` può usare `sudo` con la sua password (Claude no: non ha
+  un terminale e non la conosce), e c'è `python3-venv`. Nata dalla prova
+  della plancia: per installarla serviva un pacchetto di sistema.
 
 ## Per chi sviluppa il kit
 

@@ -19,8 +19,10 @@ controlla() {
 CASA=/home/agente
 
 controlla "l'utente agente esiste" id agente
-controlla "agente non è nel gruppo sudo" bash -c '! id -nG agente | tr " " "\n" | grep -qxE "sudo|admin|wheel"'
-controlla "agente non può usare sudo" bash -c '! runuser -u agente -- sudo -n true'
+controlla "agente è nel gruppo sudo" bash -c 'id -nG agente | tr " " "\n" | grep -qx sudo'
+controlla "sudo senza password non passa: Claude resta fuori" bash -c '! runuser -u agente -- sudo -n true'
+controlla "le regole di sudo del kit sono valide" bash -c 'visudo -cf /etc/sudoers.d/agenti-kit && grep -q "timestamp_type=tty" /etc/sudoers.d/agenti-kit'
+controlla "python3-venv c'è: agente crea un ambiente Python" bash -c 'runuser -l agente -c "python3 -m venv /tmp/prova-venv && /tmp/prova-venv/bin/python -c 1 && rm -rf /tmp/prova-venv"'
 controlla "claude risponde" claude --version
 controlla "claude è alla versione provata" bash -c '[ "$(claude --version | cut -d" " -f1)-1" = "$(sed -n "s/^VERSIONE_CLAUDE=\"\(.*\)\"/\1/p" /opt/agenti-kit/install.sh)" ]'
 controlla "la versione di claude è bloccata" bash -c 'apt-mark showhold | grep -qx claude-code'

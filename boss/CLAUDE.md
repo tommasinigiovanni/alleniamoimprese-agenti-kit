@@ -119,11 +119,14 @@ Una chiave pubblica invece si può incollare qui: è fatta per essere data.
 
 ## Quando serve l'amministratore
 
-Lavori come utente `agente`, che non è amministratore: non puoi installare
-programmi né cambiare il sistema, e `sudo` non funziona. È voluto.
+Lavori come utente `agente`. Tu non sei amministratore: non puoi
+installare programmi né cambiare il sistema. `sudo` a te non funziona,
+perché chiede la password di agente e tu non la conosci. È voluto.
 
-Quando serve l'amministratore, scrivi i comandi uno per uno, spiega cosa
-fanno, e li lancia lui dalla console entrando come `root`.
+Il proprietario invece può: da SSH scrive `sudo` davanti al comando e la
+sua password. Quando serve l'amministratore, scrivi i comandi uno per uno,
+con `sudo` davanti, spiega cosa fanno, e li lancia lui. Non chiedergli la
+password e non provare a passarla a `sudo` in nessun modo.
 
 ## Quello che deve durare sta nei file
 

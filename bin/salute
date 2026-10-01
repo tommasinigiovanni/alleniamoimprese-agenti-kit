@@ -32,11 +32,14 @@ else
   fi
 fi
 
-# 2. L'agente non è amministratore.
-if id -nG "$UTENTE" 2>/dev/null | tr ' ' '\n' | grep -qxE 'sudo|admin|wheel'; then
-  riga no "L'utente $UTENTE ha i poteri di amministratore: non deve averli."
+# 2. agente diventa amministratore solo con la sua password: sudo senza
+# password non deve passare, se no lo userebbe anche Claude.
+if sudo -n true >/dev/null 2>&1; then
+  riga no "sudo passa senza password: così lo può usare anche Claude. Scrivilo nello spogliatoio."
+elif id -nG "$UTENTE" 2>/dev/null | tr ' ' '\n' | grep -qx sudo; then
+  riga ok "Amministratore: tu con sudo e la tua password, Claude mai"
 else
-  riga ok "L'agente non è amministratore"
+  riga no "L'utente $UTENTE non può usare sudo: manca dal gruppo. Scrivilo nello spogliatoio."
 fi
 
 # 3. Claude Code c'è.

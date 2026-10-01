@@ -73,8 +73,9 @@ riprova() {
 sistema_base() {
   export DEBIAN_FRONTEND=noninteractive
   riprova "${APT[@]}" update -q || return 1
+  # python3-venv serve ai programmi Python con le loro librerie (la plancia).
   riprova "${APT[@]}" install -y -q tmux git qrencode jq unzip curl ca-certificates \
-    gnupg tzdata unattended-upgrades iproute2 openssh-server \
+    gnupg tzdata unattended-upgrades iproute2 openssh-server sudo python3-venv \
     kbd console-setup keyboard-configuration syncthing procps || return 1
   if ! timedatectl set-timezone Europe/Rome 2>/dev/null; then
     ln -sf /usr/share/zoneinfo/Europe/Rome /etc/localtime
@@ -91,12 +92,22 @@ utente_agente() {
   # La password di agente non la scrive il kit: appena creato, agente non ne
   # ha nessuna, e la sceglie lo studente da root sulla console (passwd agente).
   # Qui non si tocca, così un install.sh rilanciato non gliela toglie.
-  # L'agente non è mai amministratore.
-  local gruppo
-  for gruppo in sudo admin wheel; do
-    gpasswd -d "$UTENTE" "$gruppo" >/dev/null 2>&1 || true
-  done
-  ! id -nG "$UTENTE" | tr ' ' '\n' | grep -qxE 'sudo|admin|wheel'
+  #
+  # agente diventa amministratore con la sua password, via sudo: lo studente
+  # da SSH scrive "sudo apt-get install ..." e la password. Claude, che gira
+  # come agente ma non ha un terminale e non conosce la password, non può.
+  # Il permesso vale solo sul terminale che ha dato la password (tty), così
+  # una shell di Claude non lo eredita, e dura cinque minuti.
+  usermod -aG sudo "$UTENTE" || return 1
+  cat > /etc/sudoers.d/agenti-kit <<'FINE'
+# Kit del corso "Agenti che non dormono": sudo ad agente con la sua password.
+Defaults:agente timestamp_type=tty, timestamp_timeout=5, passwd_tries=3
+FINE
+  chmod 440 /etc/sudoers.d/agenti-kit
+  visudo -cf /etc/sudoers.d/agenti-kit >/dev/null || { rm -f /etc/sudoers.d/agenti-kit; return 1; }
+  id -nG "$UTENTE" | tr ' ' '\n' | grep -qx sudo || return 1
+  # Senza password sudo non deve passare: è la garanzia che Claude resta fuori.
+  ! runuser -u "$UTENTE" -- sudo -n true >/dev/null 2>&1
 }
 
 # La console del pannello manda i tasti come li manda la tastiera: senza
