@@ -41,6 +41,12 @@ elif id -nG "$UTENTE" 2>/dev/null | tr ' ' '\n' | grep -qx sudo; then
 else
   riga no "L'utente $UTENTE non può usare sudo: manca dal gruppo. Scrivilo nello spogliatoio."
 fi
+# 2-bis. L'unica cosa senza password: installa, che mette pacchetti di Ubuntu.
+if sudo -n -l /usr/local/bin/installa >/dev/null 2>&1; then
+  riga ok "installa NOME mette un pacchetto di Ubuntu senza password: lo può usare anche Claude"
+else
+  riga no "installa non passa senza password: Claude non può installare pacchetti. Scrivilo nello spogliatoio."
+fi
 
 # 3. Claude Code c'è.
 if command -v claude >/dev/null 2>&1; then

@@ -94,20 +94,36 @@ utente_agente() {
   # Qui non si tocca, così un install.sh rilanciato non gliela toglie.
   #
   # agente diventa amministratore con la sua password, via sudo: lo studente
-  # da SSH scrive "sudo apt-get install ..." e la password. Claude, che gira
-  # come agente ma non ha un terminale e non conosce la password, non può.
-  # Il permesso vale solo sul terminale che ha dato la password (tty), così
-  # una shell di Claude non lo eredita, e dura cinque minuti.
+  # da SSH scrive "sudo ..." e la password. Claude, che gira come agente ma
+  # non ha un terminale e non conosce la password, non può. Il permesso vale
+  # solo sul terminale che ha dato la password (tty), così una shell di
+  # Claude non lo eredita, e dura cinque minuti.
+  # Un'eccezione sola, senza password: "installa", che mette pacchetti di
+  # Ubuntu e non accetta altro. Così Claude installa da solo quello che serve
+  # a un progetto, e non tocca il resto del sistema.
   usermod -aG sudo "$UTENTE" || return 1
   cat > /etc/sudoers.d/agenti-kit <<'FINE'
-# Kit del corso "Agenti che non dormono": sudo ad agente con la sua password.
+# Kit del corso "Agenti che non dormono": sudo ad agente con la sua password,
+# e "installa" (solo pacchetti di Ubuntu) senza.
 Defaults:agente timestamp_type=tty, timestamp_timeout=5, passwd_tries=3
+agente ALL=(root) NOPASSWD: /usr/local/bin/installa
 FINE
   chmod 440 /etc/sudoers.d/agenti-kit
   visudo -cf /etc/sudoers.d/agenti-kit >/dev/null || { rm -f /etc/sudoers.d/agenti-kit; return 1; }
   id -nG "$UTENTE" | tr ' ' '\n' | grep -qx sudo || return 1
   # Senza password sudo non deve passare: è la garanzia che Claude resta fuori.
   ! runuser -u "$UTENTE" -- sudo -n true >/dev/null 2>&1
+}
+
+# "installa" passa da sudo senza password: deve essere di root e non
+# scrivibile da altri, se no agente potrebbe cambiarlo e farci passare altro.
+# I comandi del kit vengono copiati dopo (passo "comandi"): qui si controlla.
+installa_senza_password() {
+  [ -x /usr/local/bin/installa ] || return 1
+  [ "$(stat -c %U:%a /usr/local/bin/installa)" = root:755 ] || return 1
+  runuser -u "$UTENTE" -- sudo -n -l /usr/local/bin/installa >/dev/null 2>&1 || return 1
+  # Un'opzione mascherata da pacchetto non deve passare.
+  ! runuser -u "$UTENTE" -- /usr/local/bin/installa -- --dangerous >/dev/null 2>&1
 }
 
 # La console del pannello manda i tasti come li manda la tastiera: senza
@@ -375,6 +391,7 @@ passo "codex" codex_cli
 passo "file" file_agente
 passo "syncthing" syncthing_pronto
 passo "comandi" comandi
+passo "installa" installa_senza_password
 passo "sessioni" sessioni_che_restano
 passo "console" console_tty1
 

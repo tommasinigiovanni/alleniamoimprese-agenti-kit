@@ -11,6 +11,7 @@ I comandi del kit:
   salute            controlla che la macchina sia a posto
   qr-login-claude   il login di Claude, con il telefono
   qr-login-codex    il login di Codex, con il telefono
+  installa NOME     installa un pacchetto di Ubuntu (lo usa anche Claude)
   aiuto             rivedi questo testo
 
 I comandi chiave:

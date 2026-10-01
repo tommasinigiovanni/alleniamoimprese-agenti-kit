@@ -22,6 +22,12 @@ controlla "l'utente agente esiste" id agente
 controlla "agente è nel gruppo sudo" bash -c 'id -nG agente | tr " " "\n" | grep -qx sudo'
 controlla "sudo senza password non passa: Claude resta fuori" bash -c '! runuser -u agente -- sudo -n true'
 controlla "le regole di sudo del kit sono valide" bash -c 'visudo -cf /etc/sudoers.d/agenti-kit && grep -q "timestamp_type=tty" /etc/sudoers.d/agenti-kit'
+controlla "installa è di root e non si può cambiare" bash -c '[ "$(stat -c %U:%a /usr/local/bin/installa)" = root:755 ]'
+controlla "installa passa senza password, come lo lancia Claude" bash -c 'runuser -u agente -- sudo -n -l /usr/local/bin/installa'
+# Il gesto di Claude: senza terminale, senza password, un pacchetto piccolo.
+controlla "agente installa un pacchetto con installa, senza password" bash -c 'runuser -l agente -c "installa tree < /dev/null > /tmp/installa.log 2>&1" && command -v tree'
+controlla "installa rifiuta un'opzione mascherata da pacchetto" bash -c '! runuser -l agente -c "installa -- -o Dpkg::Pre-Invoke=id" && ! runuser -l agente -c "installa ../etc"'
+controlla "installa non lascia passare altri comandi da sudo" bash -c '! runuser -u agente -- sudo -n apt-get --version'
 controlla "python3-venv c'è: agente crea un ambiente Python" bash -c 'runuser -l agente -c "python3 -m venv /tmp/prova-venv && /tmp/prova-venv/bin/python -c 1 && rm -rf /tmp/prova-venv"'
 controlla "claude risponde" claude --version
 controlla "claude è alla versione provata" bash -c '[ "$(claude --version | cut -d" " -f1)-1" = "$(sed -n "s/^VERSIONE_CLAUDE=\"\(.*\)\"/\1/p" /opt/agenti-kit/install.sh)" ]'

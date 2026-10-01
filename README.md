@@ -21,8 +21,10 @@ Alla prima accensione, come root:
    password gliela dai tu, dalla console (`passwd agente`, da root):
    finché non c'è, da SSH non entra nessuno. Con la sua password `agente`
    diventa amministratore via `sudo`; Claude, che non ha un terminale e
-   non conosce la password, no. Installa anche `python3-venv`, per i
-   programmi Python con le loro librerie.
+   non conosce la password, no. L'unica cosa che passa senza password è
+   `installa NOME`, che mette pacchetti di Ubuntu e non accetta altro: così
+   Claude installa da solo quello che serve a un progetto. Installa anche
+   `python3-venv`, per i programmi Python con le loro librerie.
 5. Lascia acceso SSH sulla porta 2222, con la password, solo come `agente`.
    Root da SSH non entra mai. Da fuori la porta non si vede finché non la
    apri nel firewall del pannello. Crea `~/segreti`, la cartella dove
@@ -49,6 +51,8 @@ Alla prima accensione, come root:
   codice da incollare.
 - `qr-login-codex`: il login di Codex con il telefono. Mostra un QR, un
   indirizzo corto e un codice da scrivere nella pagina.
+- `installa NOME`: installa pacchetti di Ubuntu, senza password. Solo nomi
+  di pacchetti, niente opzioni. Lo usa anche Claude.
 - `aiuto`: il promemoria dei comandi.
 
 ## Scelte di sicurezza
@@ -56,6 +60,9 @@ Alla prima accensione, come root:
 - Claude non è amministratore. `agente` lo diventa solo con la sua
   password, da un terminale: `sudo` senza password non passa, e il
   permesso vale solo sul terminale che l'ha data, per cinque minuti.
+  L'unica eccezione è `installa`, che mette pacchetti di Ubuntu e basta:
+  è di root, non si può cambiare, e rifiuta tutto quello che non è un
+  nome di pacchetto.
 - Il firewall del pannello resta senza ingressi: da fuori non si vede nessuna
   porta. Chi vuole usare SSH dà una password ad `agente` e apre la porta
   2222 nel pannello, meglio se solo verso il proprio indirizzo. La 2222 al
@@ -111,6 +118,10 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
 - `v1.2`: `agente` può usare `sudo` con la sua password (Claude no: non ha
   un terminale e non la conosce), e c'è `python3-venv`. Nata dalla prova
   della plancia: per installarla serviva un pacchetto di sistema.
+- `v1.3`: `installa NOME`, l'unico comando da amministratore senza
+  password: pacchetti di Ubuntu e basta, così Claude installa da solo
+  quello che serve a un progetto. Il boss sa tenere acceso un programma
+  come servizio dell'utente e dice quale porta aprire nel firewall.
 
 ## Per chi sviluppa il kit
 
