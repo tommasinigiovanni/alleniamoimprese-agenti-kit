@@ -51,7 +51,13 @@ Alla prima accensione, come root:
    fra la macchina e il tuo computer, senza servizi in mezzo.
 8. Crea `~/boss`, la cartella della prima sessione, con le sue istruzioni:
    `CLAUDE.md` per Claude e `AGENTS.md` per Codex. E `~/progetti` per le
-   altre sessioni.
+   altre sessioni. Scrive le **regole della macchina**, che ogni sessione
+   legge in qualsiasi cartella (`~/.claude/CLAUDE.md` per Claude,
+   `~/.codex/AGENTS.md` per Codex): chi ti parla non è un tecnico e
+   dall'app non lancia comandi, i segreti stanno in `~/segreti`, i
+   pacchetti si mettono con `installa`, un programma che resta acceso
+   diventa un servizio, e una pagina web si apre da fuori con Caddy e un
+   nome `sslip.io`, mai con `127.0.0.1`.
 9. Sulla console entra da solo come `agente` e mostra il promemoria dei
    comandi.
 
@@ -129,7 +135,6 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   di progetto che apre il boss prendono il nome del progetto.
 - `v1.0`: il kit congelato per l'edizione che parte il 5 ottobre 2026. È la
   `v0.4.3` con la versione di Claude Code fissata a quella provata (2.1.280).
-  È la versione che usano gli studenti.
 - `v1.1`: SSH sulla porta 2222 con la password di `agente`, al posto della
   sola chiave: da Windows basta PowerShell, senza chiavi da spostare. Root
   da SSH resta fuori. C'è `~/segreti`, la cartella per password e token.
@@ -146,6 +151,11 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   caso, mostrata nel promemoria fino al primo login di un'AI. Il passo
   `su -` e `passwd agente` non serve più. C'è
   [INSTALLAZIONE-A-MANO.md](INSTALLAZIONE-A-MANO.md).
+- `v1.5`: le regole della macchina valgono per ogni sessione, non solo
+  per il boss. Prima stavano nelle istruzioni del boss, e una sessione di
+  progetto non le leggeva: proponeva `127.0.0.1` e comandi da lanciare
+  dall'app. Ora dicono anche come farsi raggiungere da fuori: Caddy con
+  un nome `sslip.io`. È la versione che usano gli studenti.
 
 ## Per chi sviluppa il kit
 

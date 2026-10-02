@@ -59,7 +59,7 @@ jobs:
       - name: Copia del kit come lo trova la macchina
         run: |
           sudo mkdir -p /opt/agenti-kit
-          sudo cp -r install.sh bin boss console test /opt/agenti-kit/
+          sudo cp -r install.sh bin boss console macchina test /opt/agenti-kit/
           echo v-prova | sudo tee /opt/agenti-kit/VERSIONE
       - name: Prima installazione
         run: sudo bash /opt/agenti-kit/install.sh

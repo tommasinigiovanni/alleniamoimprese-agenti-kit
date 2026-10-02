@@ -51,7 +51,7 @@ fila di 64 lettere e numeri.
 Scrivi la versione in una variabile, così i comandi dopo la usano:
 
 ```bash
-VERSIONE=v1.4
+VERSIONE=v1.5
 ```
 
 Scarica l'archivio:
@@ -189,15 +189,15 @@ tutto acceso: Ctrl+B, poi D.
 # Parte B - Tutto a mano, comando per comando
 
 Questo è l'elenco di quello che fa `install.sh`, nello stesso ordine, come
-comandi da lanciare **da root**. Segue la versione `v1.4` del kit: se un
+comandi da lanciare **da root**. Segue la versione `v1.5` del kit: se un
 giorno questo elenco e `install.sh` dicessero cose diverse, vale
 `install.sh`.
 
 Due avvisi prima di cominciare.
 
 - I file del kit servono lo stesso: i comandi (`salute`, `installa`, i due
-  login, `aiuto`), le istruzioni del boss e il profilo della console sono
-  file, non comandi. Scarica e controlla l'archivio come al punto 3 della
+  login, `aiuto`), le istruzioni del boss, le regole della macchina e il
+  profilo della console sono file, non comandi. Scarica e controlla l'archivio come al punto 3 della
   Parte A ed estrailo in `/opt/agenti-kit`. La differenza è che
   `install.sh` non lo lanci.
 - `install.sh` dopo ogni passo controlla che sia andato. Qui il controllo
@@ -365,15 +365,20 @@ jq '.env.DISABLE_AUTOUPDATER = "1"' /home/agente/.claude/settings.json > /tmp/s.
 jq -n --arg v "$(claude --version | awk '{print $1}')" '{hasCompletedOnboarding: true, lastOnboardingVersion: $v, theme: "dark", projects: {"/home/agente/boss": {hasTrustDialogAccepted: true}}}' > /home/agente/.claude.json
 chmod 600 /home/agente/.claude.json
 install -m 600 /opt/agenti-kit/boss/CLAUDE.md /opt/agenti-kit/boss/AGENTS.md /home/agente/boss/
+install -d -o agente -g agente -m 700 /home/agente/.codex
+install -m 600 /opt/agenti-kit/macchina/ISTRUZIONI.md /home/agente/.claude/CLAUDE.md
+install -m 600 /opt/agenti-kit/macchina/ISTRUZIONI.md /home/agente/.codex/AGENTS.md
 printf '%s\n' 'set -g prefix2 C-a' 'set -g focus-events on' 'set -g history-limit 10000' > /home/agente/.tmux.conf
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/agente/.profile
 echo 'umask 077' >> /home/agente/.profile
-chown -R agente:agente /home/agente/.claude /home/agente/.claude.json /home/agente/boss /home/agente/progetti /home/agente/segreti /home/agente/.profile /home/agente/.tmux.conf
+chown -R agente:agente /home/agente/.claude /home/agente/.codex /home/agente/.claude.json /home/agente/boss /home/agente/progetti /home/agente/segreti /home/agente/.profile /home/agente/.tmux.conf
 ```
 
 Cosa sono: `boss` è la cartella della prima sessione, con le sue
 istruzioni; `progetti` quella delle altre; `segreti` è dove stanno
-password e token, un file per servizio. Le due righe con `jq` spengono
+password e token, un file per servizio. I due file `ISTRUZIONI.md`
+copiati sono le regole della macchina: le legge ogni sessione, Claude da
+`~/.claude/CLAUDE.md` e Codex da `~/.codex/AGENTS.md`. Le due righe con `jq` spengono
 l'aggiornamento automatico di Claude e saltano le domande del primo avvio,
 solo per la cartella del boss.
 

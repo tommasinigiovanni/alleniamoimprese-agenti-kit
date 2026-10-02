@@ -86,6 +86,12 @@ fi
 # istante: si ricontrolla dopo tre secondi prima di dare errore.
 controlla "i file di agente sono di agente" bash -c "[ -z \"\$(find $CASA -not -user agente -print -quit)\" ] || { sleep 3; [ -z \"\$(find $CASA -not -user agente -print -quit)\" ]; }"
 controlla "il boss ha le sue istruzioni" grep -q "tmux new-session" "$CASA/boss/CLAUDE.md"
+controlla "le regole della macchina ci sono, per Claude" bash -c "[ \"\$(stat -c %U:%a $CASA/.claude/CLAUDE.md)\" = agente:600 ]"
+controlla "le regole della macchina ci sono, per Codex" bash -c "[ \"\$(stat -c %U:%a $CASA/.codex/AGENTS.md)\" = agente:600 ]"
+controlla "le regole dicono di usare installa" grep -q "installa NOME-PACCHETTO" "$CASA/.claude/CLAUDE.md"
+controlla "le regole dicono Caddy con sslip.io, non 127.0.0.1" bash -c "grep -q 'sslip.io' $CASA/.claude/CLAUDE.md && grep -q 'non lo può aprire' $CASA/.claude/CLAUDE.md"
+controlla "le regole dicono che dall'app non si lanciano comandi" grep -q "non può lanciare comandi" "$CASA/.claude/CLAUDE.md"
+controlla "il boss rimanda alle regole della macchina" grep -q ".claude/CLAUDE.md" "$CASA/boss/CLAUDE.md"
 controlla "il boss dà un nome alle sessioni che apre" grep -q "claude -n NOME --rc" "$CASA/boss/CLAUDE.md"
 controlla "il promemoria lancia il boss con il suo nome" grep -q "claude -n boss --rc" /usr/local/bin/aiuto
 controlla "il boss ha le istruzioni anche per Codex" grep -q "tmux new-session" "$CASA/boss/AGENTS.md"

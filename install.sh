@@ -331,6 +331,17 @@ file_agente() {
     "$configurazione" > "$configurazione.nuovo" && mv "$configurazione.nuovo" "$configurazione" || return 1
   chmod 600 "$configurazione"
 
+  # Le regole della macchina, per ogni sessione in qualsiasi cartella: Claude
+  # le legge da ~/.claude/CLAUDE.md, Codex da ~/.codex/AGENTS.md. È lo stesso
+  # testo. Se lo studente le ha già cambiate, restano le sue.
+  install -d -o "$UTENTE" -g "$UTENTE" -m 700 "$CASA/.codex"
+  local regole_macchina
+  for regole_macchina in "$CASA/.claude/CLAUDE.md" "$CASA/.codex/AGENTS.md"; do
+    if [ ! -e "$regole_macchina" ]; then
+      install -m 600 -o "$UTENTE" -g "$UTENTE" "$KIT_DIR/macchina/ISTRUZIONI.md" "$regole_macchina" || return 1
+    fi
+  done
+
   # Le istruzioni del boss. Se lo studente le ha già cambiate, restano le sue.
   # CLAUDE.md lo legge Claude, AGENTS.md lo legge Codex.
   local istruzioni

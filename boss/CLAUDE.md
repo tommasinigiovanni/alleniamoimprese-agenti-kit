@@ -7,14 +7,10 @@ dalla console.
 
 Questo file è suo: lo può cambiare quando vuole, anche chiedendolo a te.
 
-## Con chi parli
-
-Chi ti parla sta imparando e non è un tecnico.
-
-- Prima di lanciare un comando, di' in una riga cosa fa.
-- Quando qualcosa va storto, spiega cosa è successo e cosa si può fare.
-  Non dare per scontato che sappia leggere un errore.
-- Rispondi in italiano, con frasi corte.
+Le regole che valgono per tutta la macchina (con chi parli, i segreti,
+l'amministratore e `installa`, i programmi che restano accesi, come farsi
+raggiungere da fuori) sono in `~/.claude/CLAUDE.md` e valgono anche per
+te. Qui c'è solo quello che è del boss.
 
 ## Aprire una sessione di progetto
 
@@ -105,56 +101,3 @@ cartella.
 
 Tu sei la sessione `boss`: ti chiami così perché il proprietario ti ha
 lanciato con `claude -n boss --rc`, dalla cartella `~/boss`.
-
-## Cosa non passa dalla conversazione
-
-Password, token e chiavi private non si scrivono qui, e tu non li chiedi.
-Se serve un segreto, di' in quale file va scritto, dentro `~/segreti`
-(un file per servizio, per esempio `~/segreti/telegram.txt`): lo scrive
-lui da SSH o dalla console, e il file lo legge solo il programma che lo
-usa. Se un programma che costruisci ha bisogno di un segreto, fagli
-leggere quel file: non copiarne il contenuto nel codice.
-
-Una chiave pubblica invece si può incollare qui: è fatta per essere data.
-
-## Quando serve l'amministratore
-
-Lavori come utente `agente`. Tu non sei amministratore: non puoi
-cambiare il sistema. `sudo` a te non funziona, perché chiede la password
-di agente e tu non la conosci. È voluto.
-
-Una cosa sola la puoi fare da solo: installare pacchetti di Ubuntu con
-`installa NOME-PACCHETTO` (anche più nomi insieme). Passa senza password
-e accetta solo nomi di pacchetti: usalo quando a un progetto serve un
-programma di sistema (`caddy`, `ffmpeg`, `python3-venv`), senza
-chiedere al proprietario. Digli cosa hai installato e perché.
-
-Per tutto il resto che vuole l'amministratore (un servizio di sistema, un
-utente, SSH, il firewall) il proprietario può: da SSH scrive `sudo`
-davanti al comando e la sua password. Scrivi i comandi uno per uno, con
-`sudo` davanti, spiega cosa fanno, e li lancia lui. Non chiedergli la
-password e non provare a passarla a `sudo` in nessun modo.
-
-## Quello che deve restare acceso
-
-Un programma che deve restare acceso quando lui chiude la finestra, e
-ripartire da solo dopo un riavvio (una plancia, un bot, un servizio),
-non si lancia a mano e non si lascia in una sessione di tmux: diventa
-un servizio dell'utente, come Syncthing. Lo fai tu, senza chiederglielo:
-un file `~/.config/systemd/user/NOME.service`, poi
-`systemctl --user enable --now NOME.service` (il linger è già acceso; se
-il comando non trova il gestore dei servizi, prima
-`export XDG_RUNTIME_DIR=/run/user/$(id -u)`). Poi controlla che sia
-acceso con `systemctl --user status NOME.service` e diglielo.
-
-Se il programma deve essere raggiunto dal suo computer, fallo ascoltare
-sull'indirizzo esterno (`0.0.0.0`) e digli quale porta aprire nel
-firewall del pannello Hetzner, consigliando di aprirla solo verso il suo
-indirizzo. Senza quella regola da fuori non si entra: non è un errore
-del programma.
-
-## Quello che deve durare sta nei file
-
-Una conversazione finisce, un file resta. Quello che deve durare (una
-decisione, un elenco, lo stato di un lavoro) si scrive in un file nella
-cartella giusta.
