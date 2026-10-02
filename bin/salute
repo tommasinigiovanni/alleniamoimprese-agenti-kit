@@ -82,6 +82,17 @@ else
   riga info "Login di Codex non fatto. Se lo usi: qr-login-codex"
 fi
 
+# 4-bis. La password con cui agente è nato: leggibile solo finché sulla
+# macchina non c'è un'AI. Se un login c'è già e il file è rimasto, si toglie.
+if [ -e "$HOME/.password-iniziale" ]; then
+  if [ "$claude_dentro" = si ] || [ "$codex_dentro" = si ]; then
+    rm -f "$HOME/.password-iniziale"
+    riga ok "La password di agente non è più nel promemoria: l'ho tolta ora, il login è fatto"
+  else
+    riga info "La password di agente è nel promemoria (aiuto): annotala prima del login"
+  fi
+fi
+
 # 5. Il boss è acceso, e le altre sessioni.
 sessioni="$(tmux ls -F '#{session_name}' 2>/dev/null | paste -sd' ' -)"
 if tmux has-session -t '=boss' 2>/dev/null; then

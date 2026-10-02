@@ -33,3 +33,17 @@ passano bene solo lettere e numeri.
 Non sai cosa fa un comando? Chiedilo a Claude prima di lanciarlo.
 
 FINE
+
+# La password con cui agente è nato: si mostra finché sulla macchina non c'è
+# un'AI. Dopo il login di Claude o di Codex il file non c'è più.
+if [ -r "$HOME/.password-iniziale" ]; then
+  cat <<FINE
+La password di agente, per entrare in SSH e per sudo:
+
+    $(cat "$HOME/.password-iniziale")
+
+Annotala adesso, in un posto tuo: sparisce da qui quando fai il login di
+Claude. Per cambiarla: passwd
+
+FINE
+fi

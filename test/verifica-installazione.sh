@@ -21,7 +21,8 @@ CASA=/home/agente
 controlla "l'utente agente esiste" id agente
 controlla "agente è nel gruppo sudo" bash -c 'id -nG agente | tr " " "\n" | grep -qx sudo'
 controlla "sudo senza password non passa: Claude resta fuori" bash -c '! runuser -u agente -- sudo -n true'
-controlla "le regole di sudo del kit sono valide" bash -c 'visudo -cf /etc/sudoers.d/agenti-kit && grep -q "timestamp_type=tty" /etc/sudoers.d/agenti-kit'
+# timestamp_type=tty c'è solo dove il sudo lo conosce: non su sudo-rs (Ubuntu 26.04).
+controlla "le regole di sudo del kit sono valide" bash -c 'visudo -cf /etc/sudoers.d/agenti-kit && grep -q "NOPASSWD: /usr/local/bin/installa" /etc/sudoers.d/agenti-kit'
 controlla "installa è di root e non si può cambiare" bash -c '[ "$(stat -c %U:%a /usr/local/bin/installa)" = root:755 ]'
 controlla "installa passa senza password, come lo lancia Claude" bash -c 'runuser -u agente -- sudo -n -l /usr/local/bin/installa'
 # Il gesto di Claude: senza terminale, senza password, un pacchetto piccolo.
@@ -69,9 +70,14 @@ controlla "SSH: niente domande a tastiera" bash -c 'sshd -T 2>/dev/null | grep -
 controlla "SSH: root non entra" bash -c 'sshd -T 2>/dev/null | grep -qx "permitrootlogin no"'
 controlla "SSH: entra solo agente" bash -c 'sshd -T 2>/dev/null | grep -qx "allowusers agente"'
 controlla "SSH: agente non ha ancora nessuna chiave" bash -c "[ ! -s $CASA/.ssh/authorized_keys ]"
-# Appena installato agente non ha una password: gliela dà lo studente. Finché
-# non c'è, da SSH non entra nessuno.
-controlla "agente non ha ancora una password: la sceglie lo studente" bash -c '[ "$(passwd -S agente | cut -d" " -f2)" = L ]'
+# agente nasce con una password a caso: il kit la scrive in un file che legge
+# solo agente, e il promemoria la mostra finché non c'è un login.
+controlla "agente ha una password, data dal kit" bash -c '[ "$(passwd -S agente | cut -d" " -f2)" = P ]'
+controlla "la password iniziale è in un file che legge solo agente" bash -c "[ \"\$(stat -c %U:%a $CASA/.password-iniziale)\" = agente:600 ]"
+controlla "la password iniziale ha la forma attesa" bash -c "grep -qxE '[a-hjkmnp-z2-9]{4}(-[a-hjkmnp-z2-9]{4}){3}' $CASA/.password-iniziale"
+controlla "il promemoria mostra la password iniziale" bash -c "runuser -l agente -c aiuto | grep -qF \"\$(cat $CASA/.password-iniziale)\""
+controlla "la password non è finita nel registro dell'installazione" bash -c "! grep -qF \"\$(cat $CASA/.password-iniziale)\" /var/log/agenti-kit-install.log"
+controlla "un install.sh rilanciato non cambia la password" bash -c "prima=\$(getent shadow agente | cut -d: -f2); bash /opt/agenti-kit/install.sh >/dev/null 2>&1; [ \"\$prima\" = \"\$(getent shadow agente | cut -d: -f2)\" ]"
 controlla "la cartella dei segreti esiste, chiusa agli altri" bash -c "[ \"\$(stat -c %U:%a $CASA/segreti)\" = agente:700 ]"
 if [ -d /run/systemd/system ]; then
   controlla "SSH non è mascherato" bash -c '[ "$(systemctl is-enabled ssh.service 2>/dev/null)" != masked ] && [ "$(systemctl is-enabled ssh.socket 2>/dev/null)" != masked ]'

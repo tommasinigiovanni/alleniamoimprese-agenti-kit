@@ -9,7 +9,16 @@ quello che si impara nel corso.
 
 Se non puoi usare il cloud-init (il fornitore non ha quel campo, o la
 macchina esiste già), i passi da fare a mano sono in
-[INSTALLAZIONE-A-MANO.md](INSTALLAZIONE-A-MANO.md).
+[INSTALLAZIONE-A-MANO.md](INSTALLAZIONE-A-MANO.md): come lanciare tu
+l'installazione, e l'elenco di tutti i comandi per chi vuole fare ogni
+passo da sé.
+
+## Su cosa gira
+
+**Ubuntu 24.04 e Ubuntu 26.04**, su macchine x86 e ARM. Sono le due
+versioni su cui il kit è provato a ogni modifica. Le differenze fra le due
+che il kit conosce: sulla 26.04 `sudo` è `sudo-rs` e Python è il 3.14. Su
+altre versioni o altre distribuzioni può funzionare, ma nessuno l'ha visto.
 
 ## Cosa fa
 
@@ -21,9 +30,10 @@ Alla prima accensione, come root:
    automatici.
 3. Imposta la console: tastiera italiana, e un carattere che sa disegnare il
    QR del login.
-4. Crea l'utente `agente`: tu e Claude lavorate con questo utente. La
-   password gliela dai tu, dalla console (`passwd agente`, da root):
-   finché non c'è, da SSH non entra nessuno. Con la sua password `agente`
+4. Crea l'utente `agente`: tu e Claude lavorate con questo utente. Gli dà
+   una password a caso e te la mostra nel promemoria, finché non fai il
+   login di Claude o di Codex: annotala, poi sparisce. La puoi cambiare
+   con `passwd`. Con la sua password `agente`
    diventa amministratore via `sudo`; Claude, che non ha un terminale e
    non conosce la password, no. L'unica cosa che passa senza password è
    `installa NOME`, che mette pacchetti di Ubuntu e non accetta altro: così
@@ -72,7 +82,12 @@ Alla prima accensione, come root:
   2222 nel pannello, meglio se solo verso il proprio indirizzo. La 2222 al
   posto della 22 toglie il rumore dei robot, non il rischio: quello lo tiene
   fuori il firewall.
-- Il kit non scrive password: né di root né di `agente`.
+- Il kit non scrive la password di root. Ad `agente` ne dà una a caso,
+  generata sulla macchina: non sta nel testo di cloud-init né nei
+  registri. Sta in un file che legge solo `agente`, e il file si cancella
+  quando riesce il login di Claude o di Codex, perché da lì in poi sulla
+  macchina c'è un'AI che gira come `agente` e che la password non la deve
+  leggere.
 - Password, chiavi private e token non passano dalla conversazione con
   Claude: stanno in `~/segreti`, un file per servizio.
 - Il testo di cloud-init fissa l'impronta dell'archivio: la macchina esegue
@@ -126,12 +141,19 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   password: pacchetti di Ubuntu e basta, così Claude installa da solo
   quello che serve a un progetto. Il boss sa tenere acceso un programma
   come servizio dell'utente e dice quale porta aprire nel firewall.
+- `v1.4`: compatibile con Ubuntu 26.04 oltre che con la 24.04 (le regole
+  di `sudo` si adattano a `sudo-rs`), e `agente` nasce con una password a
+  caso, mostrata nel promemoria fino al primo login di un'AI. Il passo
+  `su -` e `passwd agente` non serve più. C'è
+  [INSTALLAZIONE-A-MANO.md](INSTALLAZIONE-A-MANO.md).
 
 ## Per chi sviluppa il kit
 
 - `python3 tools/crea-rilascio.py vX.Y`: archivio, impronta e testo di
   cloud-init in `dist/`.
-- `test/prova-docker.sh`: installazione in un contenitore Ubuntu 24.04,
-  lanciata due volte, poi i controlli di `test/verifica-installazione.sh`.
+- `test/prova-docker.sh [piattaforma] [immagine]`: installazione in un
+  contenitore Ubuntu (di base `ubuntu:24.04`, si prova anche con
+  `ubuntu:26.04`), lanciata due volte, poi i controlli di
+  `test/verifica-installazione.sh`.
 - `test/prova-qr-login.sh` e `test/prova-qr-login-codex.sh`: i due login con
   il QR, con un `claude` e un `codex` finti.

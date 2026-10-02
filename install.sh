@@ -89,9 +89,7 @@ utente_agente() {
   if ! id "$UTENTE" >/dev/null 2>&1; then
     useradd -m -s /bin/bash "$UTENTE" || return 1
   fi
-  # La password di agente non la scrive il kit: appena creato, agente non ne
-  # ha nessuna, e la sceglie lo studente da root sulla console (passwd agente).
-  # Qui non si tocca, così un install.sh rilanciato non gliela toglie.
+  # La password di agente la dà il passo dopo (password_agente).
   #
   # agente diventa amministratore con la sua password, via sudo: lo studente
   # da SSH scrive "sudo ..." e la password. Claude, che gira come agente ma
@@ -102,17 +100,45 @@ utente_agente() {
   # Ubuntu e non accetta altro. Così Claude installa da solo quello che serve
   # a un progetto, e non tocca il resto del sistema.
   usermod -aG sudo "$UTENTE" || return 1
-  cat > /etc/sudoers.d/agenti-kit <<'FINE'
-# Kit del corso "Agenti che non dormono": sudo ad agente con la sua password,
-# e "installa" (solo pacchetti di Ubuntu) senza.
-Defaults:agente timestamp_type=tty, timestamp_timeout=5, passwd_tries=3
-agente ALL=(root) NOPASSWD: /usr/local/bin/installa
-FINE
-  chmod 440 /etc/sudoers.d/agenti-kit
-  visudo -cf /etc/sudoers.d/agenti-kit >/dev/null || { rm -f /etc/sudoers.d/agenti-kit; return 1; }
+  # Ubuntu 24.04 ha il sudo di sempre, la 26.04 ha sudo-rs, che non conosce
+  # timestamp_type (lì il permesso è già legato al terminale, di serie). Si
+  # scrive la versione più completa che il sudo di questa macchina accetta:
+  # la regola di "installa" c'è in tutte.
+  local regole=/etc/sudoers.d/agenti-kit predefiniti
+  for predefiniti in 'Defaults:agente timestamp_type=tty, timestamp_timeout=5, passwd_tries=3' \
+                     'Defaults:agente timestamp_timeout=5, passwd_tries=3' \
+                     '# (nessuna impostazione in più: questo sudo non le accetta)'; do
+    printf '%s\n' '# Kit del corso "Agenti che non dormono": sudo ad agente con la sua password,' \
+      '# e "installa" (solo pacchetti di Ubuntu) senza.' "$predefiniti" \
+      'agente ALL=(root) NOPASSWD: /usr/local/bin/installa' > "$regole"
+    chmod 440 "$regole"
+    visudo -cf "$regole" >/dev/null 2>&1 && break
+    rm -f "$regole"
+  done
+  [ -f "$regole" ] || { echo "Le regole di sudo del kit non passano il controllo."; return 1; }
   id -nG "$UTENTE" | tr ' ' '\n' | grep -qx sudo || return 1
   # Senza password sudo non deve passare: è la garanzia che Claude resta fuori.
   ! runuser -u "$UTENTE" -- sudo -n true >/dev/null 2>&1
+}
+
+# agente nasce con una password a caso, che serve per SSH e per sudo. Il kit
+# non la conserva: la scrive in un file che legge solo agente, il promemoria
+# la mostra, e il file sparisce quando riesce il login di Claude o di Codex,
+# perché da lì in poi sulla macchina c'è un'AI che gira come agente e che la
+# password non la deve avere. Non passa dal testo di cloud-init né dai
+# registri. Se agente ha già una password (l'ha scelta lo studente, o
+# install.sh gira di nuovo) non si tocca.
+password_agente() {
+  local file="$CASA/.password-iniziale" password
+  [ "$(passwd -S "$UTENTE" 2>/dev/null | awk '{print $2}')" = P ] && return 0
+  # Niente lettere e cifre che si confondono a occhio: 0 e o, 1 e l e i.
+  password="$(LC_ALL=C tr -dc 'abcdefghjkmnpqrstuvwxyz23456789' < /dev/urandom | head -c 16)"
+  [ "${#password}" -eq 16 ] || return 1
+  password="${password:0:4}-${password:4:4}-${password:8:4}-${password:12:4}"
+  printf '%s:%s\n' "$UTENTE" "$password" | chpasswd || return 1
+  ( umask 077; printf '%s\n' "$password" > "$file" ) || return 1
+  chown "$UTENTE:$UTENTE" "$file" && chmod 600 "$file" || return 1
+  [ "$(passwd -S "$UTENTE" | awk '{print $2}')" = P ]
 }
 
 # "installa" passa da sudo senza password: deve essere di root e non
@@ -149,9 +175,9 @@ console_italiana() {
 }
 
 # SSH acceso sulla porta 2222, con la password: entra solo agente, con la
-# password che lo studente gli ha dato dalla console. Root da SSH non entra
-# mai, e una password vuota non vale. Da fuori la porta non si vede finché lo
-# studente non la apre nel firewall del pannello.
+# password che il kit gli ha dato (o con quella che lo studente ha scelto).
+# Root da SSH non entra mai, e una password vuota non vale. Da fuori la porta
+# non si vede finché lo studente non la apre nel firewall del pannello.
 # La 2222 al posto della 22 toglie il rumore dei robot che provano le password
 # su tutta la rete: non è una protezione, quella è il firewall.
 # Il nome comincia con 00: in sshd vale il primo valore letto, e cloud-init
@@ -384,6 +410,7 @@ FINE
 
 passo "sistema" sistema_base
 passo "utente" utente_agente
+passo "password" password_agente
 passo "console-italiana" console_italiana
 passo "ssh" ssh_con_password
 passo "claude" claude_code

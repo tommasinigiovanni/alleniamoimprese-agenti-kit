@@ -21,6 +21,15 @@ login_fatto() {
   codex login status >/dev/null 2>&1
 }
 
+# Da quando il login riesce sulla macchina c'è un'AI che gira come agente:
+# la password con cui agente è nato non deve più essere leggibile.
+togli_password_iniziale() {
+  if [ -e "$HOME/.password-iniziale" ]; then
+    rm -f "$HOME/.password-iniziale"
+    echo "La password di agente non compare più nel promemoria. Se non l'hai annotata: su - e poi passwd agente."
+  fi
+}
+
 schermo() {
   tmux -L "$SOCKET" capture-pane -p -J -S -200 -t "$SESSIONE" 2>/dev/null
 }
@@ -35,6 +44,7 @@ if ! command -v codex >/dev/null 2>&1; then
 fi
 
 if login_fatto; then
+  togli_password_iniziale
   echo "Il login di Codex è già fatto: il QR non serve."
   exit 0
 fi
@@ -96,6 +106,7 @@ while [ "$passati" -lt "$ATTESA_MASSIMA" ]; do
 done
 
 if [ "$esito" = "USCITA=0" ] && login_fatto; then
+  togli_password_iniziale
   echo "Login di Codex fatto. Ora puoi lanciare codex."
   exit 0
 fi

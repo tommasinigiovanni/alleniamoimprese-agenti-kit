@@ -35,6 +35,19 @@ jobs:
       - name: salute, le righe del login
         run: bash test/prova-salute-login.sh
 
+  # Ubuntu 24.04 e 26.04, in un contenitore senza systemd: la 26.04 ha
+  # sudo-rs e Python 3.14, e il kit deve reggere su tutte e due.
+  contenitore:
+    strategy:
+      fail-fast: false
+      matrix:
+        immagine: ["ubuntu:24.04", "ubuntu:26.04"]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installazione due volte e verifica, su ${{ matrix.immagine }}
+        run: bash test/prova-docker.sh "" "${{ matrix.immagine }}"
+
   installazione:
     strategy:
       fail-fast: false
@@ -82,9 +95,11 @@ jobs:
         if: always()
         run: |
           sudo apt-get install -y -q sshpass > /dev/null
-          # Senza password non entra nessuno.
+          # Con una password sbagliata non entra nessuno.
           ! sshpass -p qualsiasi ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 true
-          # Lo studente sceglie la password da root, poi entra come agente.
+          # Con la password che il kit ha dato ad agente, quella del promemoria, sì.
+          sshpass -p "$(sudo cat /home/agente/.password-iniziale)" ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 'whoami' | grep -x agente
+          # Lo studente può cambiarla; qui la cambia root, per le prove dopo.
           echo 'agente:prova-corso-2026' | sudo chpasswd
           sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 'whoami; ls -ld segreti'
           # Root non entra, neanche con la password giusta.
