@@ -110,15 +110,15 @@ jobs:
           # Un install.sh rilanciato non toglie la password.
           sudo bash /opt/agenti-kit/install.sh > /dev/null
           sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 true
-      - name: "sudo: agente con la password sì, senza password no"
+      - name: "sudo: agente è amministratore, e Claude Code chiede conferma"
         if: always()
         run: |
-          # Da SSH, come lo studente: la password di agente apre sudo.
-          sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 'echo prova-corso-2026 | sudo -S -p "" whoami' | grep -x root
-          # Senza terminale e senza password, come Claude: no.
-          ! sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 'sudo -n whoami'
-          # Il permesso dato in una sessione non passa a un'altra shell.
-          ! sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 'sudo -n whoami'
+          # Da SSH, senza terminale e senza password, come lo lancia Claude.
+          sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 'sudo -n whoami' | grep -x root
+          # Il guardrail sta nelle impostazioni di Claude Code.
+          sudo jq -e '.permissions.ask | index("Bash(sudo:*)")' /home/agente/.claude/settings.json
+          # installa, senza scrivere sudo.
+          sshpass -p prova-corso-2026 ssh -p 2222 -o StrictHostKeyChecking=no -o ConnectTimeout=5 agente@127.0.0.1 'installa tree > /dev/null && command -v tree'
       - name: Syncthing si accende come servizio di agente e collega una cartella
         if: always()
         run: |

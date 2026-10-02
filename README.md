@@ -31,14 +31,15 @@ Alla prima accensione, come root:
 3. Imposta la console: tastiera italiana, e un carattere che sa disegnare il
    QR del login.
 4. Crea l'utente `agente`: tu e Claude lavorate con questo utente. Gli dà
-   una password a caso e te la mostra nel promemoria, finché non fai il
-   login di Claude o di Codex: annotala, poi sparisce. La puoi cambiare
-   con `passwd`. Con la sua password `agente`
-   diventa amministratore via `sudo`; Claude, che non ha un terminale e
-   non conosce la password, no. L'unica cosa che passa senza password è
-   `installa NOME`, che mette pacchetti di Ubuntu e non accetta altro: così
-   Claude installa da solo quello che serve a un progetto. Installa anche
-   `python3-venv`, per i programmi Python con le loro librerie.
+   una password a caso, per entrare in SSH, e te la mostra nel promemoria
+   finché non fai il login di Claude o di Codex: annotala, poi sparisce.
+   La puoi cambiare con `passwd`. `agente` è amministratore: `sudo`
+   funziona senza password, anche per Claude, che così può installare,
+   configurare e riavviare quello che serve a un progetto. Il guardrail è
+   in Claude Code: **ogni comando `sudo` chiede la tua conferma**, e le
+   regole della macchina dicono a Claude di spiegarti prima cosa fa. Per
+   i pacchetti di Ubuntu c'è `installa NOME`, senza conferma. Installa
+   anche `python3-venv`, per i programmi Python con le loro librerie.
 5. Lascia acceso SSH sulla porta 2222, con la password, solo come `agente`.
    Root da SSH non entra mai. Da fuori la porta non si vede finché non la
    apri nel firewall del pannello. Crea `~/segreti`, la cartella dove
@@ -54,8 +55,9 @@ Alla prima accensione, come root:
    altre sessioni. Scrive le **regole della macchina**, che ogni sessione
    legge in qualsiasi cartella (`~/.claude/CLAUDE.md` per Claude,
    `~/.codex/AGENTS.md` per Codex): chi ti parla non è un tecnico e
-   dall'app non lancia comandi, i segreti stanno in `~/segreti`, i
-   pacchetti si mettono con `installa`, un programma che resta acceso
+   dall'app non lancia comandi, i segreti stanno in `~/segreti`, prima di
+   un comando `sudo` si spiega e si aspetta il sì, i pacchetti si mettono
+   con `installa`, un programma che resta acceso
    diventa un servizio, e una pagina web si apre da fuori con Caddy e un
    nome `sslip.io`, mai con `127.0.0.1`.
 9. Sulla console entra da solo come `agente` e mostra il promemoria dei
@@ -71,18 +73,23 @@ Alla prima accensione, come root:
   codice da incollare.
 - `qr-login-codex`: il login di Codex con il telefono. Mostra un QR, un
   indirizzo corto e un codice da scrivere nella pagina.
-- `installa NOME`: installa pacchetti di Ubuntu, senza password. Solo nomi
-  di pacchetti, niente opzioni. Lo usa anche Claude.
+- `installa NOME`: installa pacchetti di Ubuntu. Solo nomi di pacchetti,
+  niente opzioni. Lo usa anche Claude, senza chiederti conferma.
 - `aiuto`: il promemoria dei comandi.
 
 ## Scelte di sicurezza
 
-- Claude non è amministratore. `agente` lo diventa solo con la sua
-  password, da un terminale: `sudo` senza password non passa, e il
-  permesso vale solo sul terminale che l'ha data, per cinque minuti.
-  L'unica eccezione è `installa`, che mette pacchetti di Ubuntu e basta:
-  è di root, non si può cambiare, e rifiuta tutto quello che non è un
-  nome di pacchetto.
+- Claude è amministratore, con un guardrail. `sudo` funziona senza
+  password per `agente`, quindi anche per Claude. In cambio, nelle
+  impostazioni di Claude Code c'è una regola che fa chiedere conferma a
+  ogni comando che comincia con `sudo`: tu vedi il comando e dici sì o no.
+  E le regole della macchina dicono a Claude di dire prima che è un
+  comando da amministratore, cosa fa, e di aspettare il tuo sì.
+  **Non è un muro**: la regola vede i comandi `sudo` che Claude scrive,
+  non quelli nascosti dentro uno script. Ferma la svista e ti fa vedere
+  cosa succede; non ferma un attacco costruito bene. Per questo contano
+  le altre due cose, che stanno fuori dalla macchina: il firewall del
+  pannello e i backup.
 - Il firewall del pannello resta senza ingressi: da fuori non si vede nessuna
   porta. Chi vuole usare SSH dà una password ad `agente` e apre la porta
   2222 nel pannello, meglio se solo verso il proprio indirizzo. La 2222 al
@@ -155,7 +162,12 @@ Ogni versione è una release con l'archivio e il testo di cloud-init.
   per il boss. Prima stavano nelle istruzioni del boss, e una sessione di
   progetto non le leggeva: proponeva `127.0.0.1` e comandi da lanciare
   dall'app. Ora dicono anche come farsi raggiungere da fuori: Caddy con
-  un nome `sslip.io`. È la versione che usano gli studenti.
+  un nome `sslip.io`.
+- `v1.6`: Claude è amministratore. `sudo` senza password per `agente`, e
+  Claude Code chiede conferma a ogni comando `sudo`. Con il solo
+  `installa` Claude metteva un programma ma non poteva configurarlo né
+  riavviarlo, e mandava il proprietario in un terminale per ogni passo.
+  È la versione che usano gli studenti.
 
 ## Per chi sviluppa il kit
 

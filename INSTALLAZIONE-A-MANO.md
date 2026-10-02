@@ -51,7 +51,7 @@ fila di 64 lettere e numeri.
 Scrivi la versione in una variabile, così i comandi dopo la usano:
 
 ```bash
-VERSIONE=v1.5
+VERSIONE=v1.6
 ```
 
 Scarica l'archivio:
@@ -116,11 +116,10 @@ l'installazione. Finché sei root, leggila e annotala:
 cat /home/agente/.password-iniziale
 ```
 
-È la password con cui entrerai in SSH e con cui userai `sudo`. La vedi
-anche nel promemoria, ogni volta che entri come `agente`, **finché non fai
-il login di Claude o di Codex**: in quel momento il file si cancella,
-perché da lì in poi sulla macchina c'è un'AI che gira come `agente` e che
-la password non la deve leggere.
+È la password con cui entrerai in SSH. La vedi anche nel promemoria, ogni
+volta che entri come `agente`, **finché non fai il login di Claude o di
+Codex**: in quel momento il file si cancella, perché una password non
+resta scritta in chiaro più del necessario.
 
 Se preferisci sceglierla tu, puoi cambiarla subito, sempre da root:
 
@@ -189,7 +188,7 @@ tutto acceso: Ctrl+B, poi D.
 # Parte B - Tutto a mano, comando per comando
 
 Questo è l'elenco di quello che fa `install.sh`, nello stesso ordine, come
-comandi da lanciare **da root**. Segue la versione `v1.5` del kit: se un
+comandi da lanciare **da root**. Segue la versione `v1.6` del kit: se un
 giorno questo elenco e `install.sh` dicessero cose diverse, vale
 `install.sh`.
 
@@ -215,33 +214,21 @@ printf '%s\n' 'APT::Periodic::Update-Package-Lists "1";' 'APT::Periodic::Unatten
 
 Da guardare: `date` dà l'ora italiana.
 
-## B2. L'utente agente, con sudo
+## B2. L'utente agente, amministratore
 
 ```bash
 useradd -m -s /bin/bash agente
 usermod -aG sudo agente
-```
-
-Le regole di `sudo`: `agente` lo usa con la sua password, e una cosa sola
-passa senza, il comando `installa`. Su Ubuntu 24.04:
-
-```bash
-printf '%s\n' 'Defaults:agente timestamp_type=tty, timestamp_timeout=5, passwd_tries=3' 'agente ALL=(root) NOPASSWD: /usr/local/bin/installa' > /etc/sudoers.d/agenti-kit
-```
-
-Su Ubuntu 26.04, dove `sudo` è un programma diverso (`sudo-rs`) che non
-conosce `timestamp_type`:
-
-```bash
-printf '%s\n' 'Defaults:agente timestamp_timeout=5, passwd_tries=3' 'agente ALL=(root) NOPASSWD: /usr/local/bin/installa' > /etc/sudoers.d/agenti-kit
-```
-
-Poi, su tutte e due:
-
-```bash
+printf '%s\n' 'agente ALL=(ALL:ALL) NOPASSWD: ALL' > /etc/sudoers.d/agenti-kit
 chmod 440 /etc/sudoers.d/agenti-kit
 visudo -cf /etc/sudoers.d/agenti-kit
 ```
+
+`agente` usa `sudo` senza password, e Claude gira come `agente`: quindi
+anche Claude. Il guardrail non è qui, è la regola di Claude Code del
+punto B8, che fa chiedere conferma a ogni comando `sudo`. Se vuoi una
+macchina dove Claude **non** è amministratore, salta la riga con
+`printf`: `sudo` chiederà la password di `agente`, che Claude non ha.
 
 Da guardare: `visudo` risponde `parsed OK`. Se dà un errore, **cancella
 subito il file** (`rm /etc/sudoers.d/agenti-kit`): un file di regole
@@ -361,7 +348,7 @@ Da guardare: `codex --version` risponde `codex-cli 0.159.2`.
 install -d -o agente -g agente -m 700 /home/agente/.claude /home/agente/.cache /home/agente/boss /home/agente/progetti /home/agente/segreti
 chmod 700 /home/agente
 echo '{}' > /home/agente/.claude/settings.json
-jq '.env.DISABLE_AUTOUPDATER = "1"' /home/agente/.claude/settings.json > /tmp/s.json && mv /tmp/s.json /home/agente/.claude/settings.json
+jq '.env.DISABLE_AUTOUPDATER = "1" | .permissions.ask = ["Bash(sudo:*)"]' /home/agente/.claude/settings.json > /tmp/s.json && mv /tmp/s.json /home/agente/.claude/settings.json
 jq -n --arg v "$(claude --version | awk '{print $1}')" '{hasCompletedOnboarding: true, lastOnboardingVersion: $v, theme: "dark", projects: {"/home/agente/boss": {hasTrustDialogAccepted: true}}}' > /home/agente/.claude.json
 chmod 600 /home/agente/.claude.json
 install -m 600 /opt/agenti-kit/boss/CLAUDE.md /opt/agenti-kit/boss/AGENTS.md /home/agente/boss/
@@ -379,8 +366,9 @@ istruzioni; `progetti` quella delle altre; `segreti` è dove stanno
 password e token, un file per servizio. I due file `ISTRUZIONI.md`
 copiati sono le regole della macchina: le legge ogni sessione, Claude da
 `~/.claude/CLAUDE.md` e Codex da `~/.codex/AGENTS.md`. Le due righe con `jq` spengono
-l'aggiornamento automatico di Claude e saltano le domande del primo avvio,
-solo per la cartella del boss.
+l'aggiornamento automatico di Claude, gli fanno **chiedere conferma a ogni
+comando `sudo`** (è il guardrail del punto B2: non saltarla) e saltano le
+domande del primo avvio, solo per la cartella del boss.
 
 Da guardare: `ls -la /home/agente` mostra le cartelle, tutte di `agente`.
 
@@ -409,10 +397,8 @@ install -m 644 /opt/agenti-kit/VERSIONE /usr/local/share/agenti-kit/
 ```
 
 Da guardare: `ls -l /usr/local/bin/installa` dice `root root` e
-`-rwxr-xr-x`. Deve essere di root e non scrivibile da altri, perché è
-l'unico comando che `sudo` lascia passare senza password. E
-`runuser -u agente -- sudo -n -l /usr/local/bin/installa` risponde con il
-percorso del comando.
+`-rwxr-xr-x`. E `runuser -u agente -- sudo -n -l /usr/local/bin/installa`
+risponde con il percorso del comando.
 
 ## B11. Le sessioni che restano accese, e la console
 

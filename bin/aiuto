@@ -12,6 +12,7 @@ I comandi del kit:
   qr-login-claude   il login di Claude, con il telefono
   qr-login-codex    il login di Codex, con il telefono
   installa NOME     installa un pacchetto di Ubuntu (lo usa anche Claude)
+  sudo COMANDO      lancia un comando da amministratore
   aiuto             rivedi questo testo
 
 I comandi chiave:
@@ -38,7 +39,7 @@ FINE
 # un'AI. Dopo il login di Claude o di Codex il file non c'è più.
 if [ -r "$HOME/.password-iniziale" ]; then
   cat <<FINE
-La password di agente, per entrare in SSH e per sudo:
+La password di agente, per entrare in SSH:
 
     $(cat "$HOME/.password-iniziale")
 

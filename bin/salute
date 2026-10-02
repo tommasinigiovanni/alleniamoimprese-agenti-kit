@@ -32,20 +32,21 @@ else
   fi
 fi
 
-# 2. agente diventa amministratore solo con la sua password: sudo senza
-# password non deve passare, se no lo userebbe anche Claude.
-if sudo -n true >/dev/null 2>&1; then
-  riga no "sudo passa senza password: così lo può usare anche Claude. Scrivilo nello spogliatoio."
-elif id -nG "$UTENTE" 2>/dev/null | tr ' ' '\n' | grep -qx sudo; then
-  riga ok "Amministratore: tu con sudo e la tua password, Claude mai"
+# 2. agente è amministratore senza password, e Claude gira come agente: il
+# guardrail è la regola di Claude Code che chiede conferma a ogni comando sudo.
+IMPOSTAZIONI="$HOME/.claude/settings.json"
+if ! sudo -n true >/dev/null 2>&1; then
+  riga no "sudo non passa: l'amministratore non è impostato come nel kit. Scrivilo nello spogliatoio."
+elif jq -e '(.permissions.ask // []) | index("Bash(sudo:*)")' "$IMPOSTAZIONI" >/dev/null 2>&1; then
+  riga ok "Amministratore: sudo è libero, e Claude chiede conferma a ogni comando sudo"
 else
-  riga no "L'utente $UTENTE non può usare sudo: manca dal gruppo. Scrivilo nello spogliatoio."
+  riga no "Claude può usare sudo senza chiedere conferma: manca la regola nelle impostazioni. Scrivilo nello spogliatoio."
 fi
-# 2-bis. L'unica cosa senza password: installa, che mette pacchetti di Ubuntu.
+# 2-bis. installa: i pacchetti di Ubuntu, senza domanda di conferma.
 if sudo -n -l /usr/local/bin/installa >/dev/null 2>&1; then
-  riga ok "installa NOME mette un pacchetto di Ubuntu senza password: lo può usare anche Claude"
+  riga ok "installa NOME mette un pacchetto di Ubuntu: lo usa anche Claude, senza chiedere"
 else
-  riga no "installa non passa senza password: Claude non può installare pacchetti. Scrivilo nello spogliatoio."
+  riga no "installa non funziona: Claude non può installare pacchetti. Scrivilo nello spogliatoio."
 fi
 
 # 3. Claude Code c'è.

@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Installa pacchetti di Ubuntu, e basta: installa NOME [NOME ...]
 #
-# È l'unica cosa che agente, e quindi Claude, può fare da amministratore
-# senza password: sudo lascia passare solo questo comando (vedi
-# /etc/sudoers.d/agenti-kit). Per questo accetta solo nomi di pacchetti:
-# niente opzioni, niente percorsi, niente comandi. Tutto il resto che vuole
-# l'amministratore passa da "sudo" con la password del proprietario.
+# È la strada breve per i pacchetti: Claude lo lancia senza scrivere "sudo",
+# quindi senza la domanda di conferma che Claude Code fa per ogni comando da
+# amministratore. Per questo accetta solo nomi di pacchetti: niente opzioni,
+# niente percorsi, niente comandi. Tutto il resto passa da "sudo", e lì la
+# conferma c'è.
 set -euo pipefail
 
 if [ "$#" -eq 0 ]; then
@@ -27,8 +27,8 @@ for nome in "$@"; do
 done
 
 if [ "$(id -u)" -ne 0 ]; then
-  # Rilanciato da root attraverso sudo, senza password: vale solo per questo
-  # programma. Se sudo lo rifiuta, la regola del kit non c'è.
+  # Rilanciato da root attraverso sudo. Se sudo lo rifiuta, la regola del kit
+  # non c'è.
   exec sudo -n -- /usr/local/bin/installa "$@"
 fi
 

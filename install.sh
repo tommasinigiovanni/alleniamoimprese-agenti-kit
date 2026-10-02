@@ -91,42 +91,36 @@ utente_agente() {
   fi
   # La password di agente la dà il passo dopo (password_agente).
   #
-  # agente diventa amministratore con la sua password, via sudo: lo studente
-  # da SSH scrive "sudo ..." e la password. Claude, che gira come agente ma
-  # non ha un terminale e non conosce la password, non può. Il permesso vale
-  # solo sul terminale che ha dato la password (tty), così una shell di
-  # Claude non lo eredita, e dura cinque minuti.
-  # Un'eccezione sola, senza password: "installa", che mette pacchetti di
-  # Ubuntu e non accetta altro. Così Claude installa da solo quello che serve
-  # a un progetto, e non tocca il resto del sistema.
+  # agente è amministratore senza password: così Claude, che gira come agente,
+  # può installare, configurare e riavviare quello che serve a un progetto,
+  # senza mandare il proprietario in un terminale a ogni passo. Scelta di
+  # Giovanni del 2 ottobre 2026, dopo la prova della plancia: con il solo
+  # "installa" Claude metteva Caddy ma non poteva configurarlo.
+  # Il guardrail non sta qui, sta in Claude Code: nelle impostazioni di agente
+  # c'è una regola che fa chiedere conferma a ogni comando "sudo" (vedi
+  # file_agente), e le regole della macchina dicono a Claude di spiegare prima
+  # cosa fa. Non è un muro: ferma la svista e fa vedere cosa succede.
+  # La riga vale sia per il sudo di Ubuntu 24.04 sia per sudo-rs della 26.04.
   usermod -aG sudo "$UTENTE" || return 1
-  # Ubuntu 24.04 ha il sudo di sempre, la 26.04 ha sudo-rs, che non conosce
-  # timestamp_type (lì il permesso è già legato al terminale, di serie). Si
-  # scrive la versione più completa che il sudo di questa macchina accetta:
-  # la regola di "installa" c'è in tutte.
-  local regole=/etc/sudoers.d/agenti-kit predefiniti
-  for predefiniti in 'Defaults:agente timestamp_type=tty, timestamp_timeout=5, passwd_tries=3' \
-                     'Defaults:agente timestamp_timeout=5, passwd_tries=3' \
-                     '# (nessuna impostazione in più: questo sudo non le accetta)'; do
-    printf '%s\n' '# Kit del corso "Agenti che non dormono": sudo ad agente con la sua password,' \
-      '# e "installa" (solo pacchetti di Ubuntu) senza.' "$predefiniti" \
-      'agente ALL=(root) NOPASSWD: /usr/local/bin/installa' > "$regole"
-    chmod 440 "$regole"
-    visudo -cf "$regole" >/dev/null 2>&1 && break
+  local regole=/etc/sudoers.d/agenti-kit
+  printf '%s\n' '# Kit del corso "Agenti che non dormono": agente è amministratore senza' \
+    '# password. La conferma su ogni comando sudo la chiede Claude Code.' \
+    'agente ALL=(ALL:ALL) NOPASSWD: ALL' > "$regole"
+  chmod 440 "$regole"
+  if ! visudo -cf "$regole" >/dev/null 2>&1; then
     rm -f "$regole"
-  done
-  [ -f "$regole" ] || { echo "Le regole di sudo del kit non passano il controllo."; return 1; }
+    echo "Le regole di sudo del kit non passano il controllo."
+    return 1
+  fi
   id -nG "$UTENTE" | tr ' ' '\n' | grep -qx sudo || return 1
-  # Senza password sudo non deve passare: è la garanzia che Claude resta fuori.
-  ! runuser -u "$UTENTE" -- sudo -n true >/dev/null 2>&1
+  runuser -u "$UTENTE" -- sudo -n true >/dev/null 2>&1
 }
 
-# agente nasce con una password a caso, che serve per SSH e per sudo. Il kit
+# agente nasce con una password a caso, che serve per entrare in SSH. Il kit
 # non la conserva: la scrive in un file che legge solo agente, il promemoria
-# la mostra, e il file sparisce quando riesce il login di Claude o di Codex,
-# perché da lì in poi sulla macchina c'è un'AI che gira come agente e che la
-# password non la deve avere. Non passa dal testo di cloud-init né dai
-# registri. Se agente ha già una password (l'ha scelta lo studente, o
+# la mostra, e il file sparisce quando riesce il login di Claude o di Codex:
+# una password non resta scritta in chiaro più del necessario. Non passa dal
+# testo di cloud-init né dai registri. Se agente ha già una password (l'ha scelta lo studente, o
 # install.sh gira di nuovo) non si tocca.
 password_agente() {
   local file="$CASA/.password-iniziale" password
@@ -141,8 +135,9 @@ password_agente() {
   [ "$(passwd -S "$UTENTE" | awk '{print $2}')" = P ]
 }
 
-# "installa" passa da sudo senza password: deve essere di root e non
-# scrivibile da altri, se no agente potrebbe cambiarlo e farci passare altro.
+# "installa" mette pacchetti di Ubuntu senza passare da un comando "sudo"
+# scritto da Claude: quindi senza la domanda di conferma. Per i pacchetti va
+# bene così; per tutto il resto la conferma c'è. Accetta solo nomi di pacchetti.
 # I comandi del kit vengono copiati dopo (passo "comandi"): qui si controlla.
 installa_senza_password() {
   [ -x /usr/local/bin/installa ] || return 1
@@ -314,7 +309,11 @@ file_agente() {
   # accende da solo: lo accende lo studente.
   local impostazioni="$CASA/.claude/settings.json"
   [ -s "$impostazioni" ] || echo '{}' > "$impostazioni"
-  jq 'del(.remoteControlAtStartup) | .env.DISABLE_AUTOUPDATER = "1"' \
+  # In più: Claude Code chiede conferma a ogni comando che comincia con sudo,
+  # anche dentro un comando composto. È una regola "ask": vince su qualsiasi
+  # "non chiedermelo più". Lo studente la vede nell'app, con il comando.
+  jq 'del(.remoteControlAtStartup) | .env.DISABLE_AUTOUPDATER = "1"
+      | .permissions.ask = (((.permissions.ask // []) + ["Bash(sudo:*)"]) | unique)' \
     "$impostazioni" > "$impostazioni.nuovo" && mv "$impostazioni.nuovo" "$impostazioni" || return 1
 
   # Onboarding già fatto e fiducia accettata solo per la cartella del boss,
