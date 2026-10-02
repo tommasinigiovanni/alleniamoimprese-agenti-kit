@@ -7,6 +7,10 @@ incolli nel campo cloud-init il testo della release, e la macchina fa da sola.
 Il kit fa solo il pavimento. tmux, Claude e Remote Control li accendi tu: è
 quello che si impara nel corso.
 
+Se non puoi usare il cloud-init (il fornitore non ha quel campo, o la
+macchina esiste già), i passi da fare a mano sono in
+[INSTALLAZIONE-A-MANO.md](INSTALLAZIONE-A-MANO.md).
+
 ## Cosa fa
 
 Alla prima accensione, come root:
