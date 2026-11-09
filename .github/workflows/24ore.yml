@@ -1,0 +1,30 @@
+name: Profilo 24ORE
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ssh-e-dashboard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepara una chiave fittizia e il kit
+        run: |
+          ssh-keygen -q -t ed25519 -N '' -f "$RUNNER_TEMP/chiave-corso"
+          sudo install -d -m 700 /root/.ssh
+          sudo install -m 600 "$RUNNER_TEMP/chiave-corso.pub" /root/.ssh/authorized_keys
+          sudo mkdir -p /opt/agenti-kit
+          sudo cp -r install.sh bin boss console macchina profili test /opt/agenti-kit/
+          echo v1.7-24ore-prova | sudo tee /opt/agenti-kit/VERSIONE
+      - name: Installa il profilo completo
+        run: sudo env AGENTI_PROFILO=24ore AGENTI_IPV4_PUBBLICO=203.0.113.10 bash /opt/agenti-kit/install.sh
+      - name: Accesso reale, sudo, sessione persistente e dashboard
+        run: sudo env AGENTI_TEST_KEY="$RUNNER_TEMP/chiave-corso" AGENTI_IPV4_PUBBLICO=203.0.113.10 bash /opt/agenti-kit/test/prova-24ore.sh
+      - name: Registro senza credenziali personali
+        if: always()
+        run: |
+          sudo tail -n 100 /var/log/agenti-kit-install.log || true
+          sudo journalctl -u session-board.service --no-pager -n 30 || true
