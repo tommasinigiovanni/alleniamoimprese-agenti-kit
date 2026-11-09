@@ -28,6 +28,16 @@ Il profilo è per **VM nuove**, non per convertire quelle degli studenti della
 prima edizione. Prima della diretta va provato anche il percorso effettivo
 Hetzner e il rilascio del certificato HTTPS.
 
+Il progetto `~/progetti/report-settimanale` contiene un programma già eseguibile
+con dati fittizi e istruzioni per personalizzarlo con Claude. Servizio e timer
+utente `report-corso` sono predisposti ma spenti: si provano manualmente prima
+di attivare la programmazione. Hindsight e notifiche esterne non sono compresi
+in questa variante.
+
+Materiale 24ORE: [guida Mac/Windows](materiali/24ore/GUIDA-STUDENTI.md),
+[regia delle quattro lezioni](materiali/24ore/REGIA.md) e
+[regia HTML offline](materiali/24ore/regia.html), con timer e comandi copiabili.
+
 ## Percorso originale Alleniamo Imprese
 
 Il kit che prepara la macchina del corso "Agenti che non dormono" di

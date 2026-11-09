@@ -5,6 +5,19 @@ plancia_24ore() {
   local versione=v1.2 impronta=7a2dbd9acc72a8ac2c7aaa0bdd9fa2364edadb0e49fef3779124680ec6a1af97
   local destinazione=/opt/session-board temporanea ip nome configurazione
   configurazione="$CASA/.config/session-board"
+  # Un flusso comune già eseguibile, poi adattabile con Claude. Il rilancio del
+  # kit conserva i file modificati dal partecipante e l'orario scelto.
+  if [ ! -e "$CASA/progetti/report-settimanale" ]; then
+    cp -R "$KIT_DIR/profili/esempio-24ore" "$CASA/progetti/report-settimanale" || return 1
+    chown -R "$UTENTE:$UTENTE" "$CASA/progetti/report-settimanale" || return 1
+  fi
+  install -d -m 700 -o "$UTENTE" -g "$UTENTE" "$CASA/.config" "$CASA/.config/systemd" "$CASA/.config/systemd/user"
+  local unita
+  for unita in report-corso.service report-corso.timer; do
+    if [ ! -e "$CASA/.config/systemd/user/$unita" ]; then
+      install -m 600 -o "$UTENTE" -g "$UTENTE" "$KIT_DIR/profili/$unita" "$CASA/.config/systemd/user/$unita" || return 1
+    fi
+  done
   temporanea="$(mktemp -d)" || return 1
   if ! riprova curl -fsSL --max-time 180 -o "$temporanea/board.tar.gz" \
       "https://github.com/tommasinigiovanni/alleniamoimprese-session-board/releases/download/$versione/session-board-portable.tar.gz"; then

@@ -29,6 +29,7 @@ jobs:
         run: |
           sudo apt-get install -y -q cloud-init > /dev/null
           cloud-init schema --config-file dist/cloud-init-v0.0-prova.yaml
+          cloud-init schema --config-file dist/cloud-init-24ore-v0.0-prova.yaml
       - name: qr-login-claude e qr-login-codex
         run: |
           sudo apt-get install -y -q tmux qrencode jq > /dev/null

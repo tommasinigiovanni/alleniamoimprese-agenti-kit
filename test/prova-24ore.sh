@@ -31,6 +31,16 @@ test "$(systemctl show -p User --value session-board.service)" = agente
 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 test -x /opt/session-board/.venv/bin/python
 test -s /usr/local/share/agenti-kit/plancia-url
+ssh_prova agente@127.0.0.1 'cd progetti/report-settimanale && python3 riepilogo.py && grep -F "Attività totali: 5." uscite/riepilogo.md'
+test -s /home/agente/.config/systemd/user/report-corso.timer
+ssh_prova agente@127.0.0.1 'systemctl --user daemon-reload && systemctl --user start report-corso.service && journalctl --user -u report-corso.service -n 10 --no-pager'
+if ssh_prova agente@127.0.0.1 'systemctl --user is-enabled --quiet report-corso.timer'; then exit 1; fi
+# Una chiave non selezionata non autentica nessuno dei due utenti.
+ssh-keygen -q -t ed25519 -N '' -f /tmp/chiave-estranea-24ore
+for account in agente root; do
+  if ssh -i /tmp/chiave-estranea-24ore -p 2222 -o IdentitiesOnly=yes -o BatchMode=yes \
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$account@127.0.0.1" true; then exit 1; fi
+done
 # Disconnessione e rientro reali: il programma rimane nella sessione di agente.
 ssh_prova agente@127.0.0.1 'tmux new-session -d -s prova-24ore; tmux send-keys -t prova-24ore "sleep 3; echo finito > /home/agente/prova-persistenza" Enter'
 sleep 4
