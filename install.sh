@@ -219,6 +219,7 @@ FINE
   sshd -t || return 1
   local valori
   valori="$(sshd -T 2>/dev/null)"
+  printf '%s\n' "$valori" | grep -E '^(port|passwordauthentication|permitrootlogin|allowusers|pubkeyauthentication) '
   printf '%s\n' "$valori" | grep -qx 'port 2222' || return 1
   printf '%s\n' "$valori" | grep -qx "passwordauthentication $password" || return 1
   printf '%s\n' "$valori" | grep -qx 'permitemptypasswords no' || return 1
@@ -228,7 +229,9 @@ FINE
   else
     printf '%s\n' "$valori" | grep -qx 'permitrootlogin no' || return 1
   fi
-  printf '%s\n' "$valori" | grep -qx "allowusers $utenti" || return 1
+  # sshd -T può stampare una riga allowusers per ogni utente.
+  [ "$(printf '%s\n' "$valori" | awk '$1 == "allowusers" {for (i=2; i<=NF; i++) print $i}' | sort)" = \
+    "$(printf '%s\n' "$utenti" | tr ' ' '\n' | sort)" ] || return 1
   install -d -m 755 /etc/agenti-kit
   printf '%s\n' "$PROFILO" > /etc/agenti-kit/profilo
   [ "$SENZA_SYSTEMD" = 1 ] && return 0

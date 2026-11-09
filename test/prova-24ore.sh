@@ -14,7 +14,7 @@ sshd -T | grep -qx 'passwordauthentication no'
 sshd -T | grep -qx 'kbdinteractiveauthentication no'
 sshd -T | grep -qx 'pubkeyauthentication yes'
 sshd -T | grep -qxE 'permitrootlogin (without-password|prohibit-password)'
-sshd -T | grep -qx 'allowusers root agente'
+test "$(sshd -T | awk '$1 == "allowusers" {for (i=2; i<=NF; i++) print $i}' | sort | paste -sd' ' -)" = 'agente root'
 ssh_prova agente@127.0.0.1 whoami | grep -x agente
 ssh_prova root@127.0.0.1 whoami | grep -x root
 ssh_prova agente@127.0.0.1 'sudo -n whoami' | grep -x root
