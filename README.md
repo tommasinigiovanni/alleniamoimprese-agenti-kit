@@ -1,5 +1,11 @@
 # Il kit della macchina: Agenti che non dormono
 
+La distribuzione per gli studenti AI Builder è ora nel repository
+[24orebs-ai-builder-kit](https://github.com/tommasinigiovanni/24orebs-ai-builder-kit),
+con cronologia nuova, cloud-init e release dedicate. Questo repository conserva
+lo storico del kit e il materiale docente. Per il nuovo corso usare i download
+del repository studenti.
+
 ## Variante 24ORE Business School
 
 Il cloud-init `cloud-init-24ore-VERSIONE.yaml` seleziona il profilo AI Builder.

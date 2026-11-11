@@ -5,10 +5,11 @@
 - **GUIDA-STUDENTI.md**: istruzioni distinte per Mac e Windows, creazione VM, SSH 2222, login Claude, tmux, dashboard ed esempio pronto.
 - **pc-server-tmux.png**: schema 1920×1080 per i primi dieci minuti.
 
-Il cloud-init da distribuire è quello **24ORE**, generato dal kit e incluso
-nella release candidata. Il bootstrap scarica l’archivio dalla relativa
-release GitHub e ne verifica l’impronta; non funziona finché quegli asset non
-sono stati pubblicati. Il cloud-init senza `24ore` segue l’edizione precedente.
+Il kit e le guide per gli studenti sono ora nel repository pubblico
+[24orebs-ai-builder-kit](https://github.com/tommasinigiovanni/24orebs-ai-builder-kit).
+Usa la release **v1.0.0-rc1** e il suo `cloud-init-v1.0.0-rc1.yaml`, già
+scaricati senza autenticazione e verificati tramite SHA256. I file cloud-init
+del vecchio repository sono materiale d’archivio, non la distribuzione attuale.
 
 La regia è una copia dedicata al nuovo corso: non usa il database delle sei
 live Alleniamo Imprese. Per aggiornare questa copia, modifica REGIA.md e

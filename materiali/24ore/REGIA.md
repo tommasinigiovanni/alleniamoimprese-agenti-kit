@@ -11,7 +11,7 @@ docenti. Le frasi tra virgolette sono tracce per il parlato.
 ### Prima della prima diretta
 
 - Apri `regia.html` sul secondo monitor e tieni aperta la guida studenti.
-- Verifica che il cloud-init distribuito sia quello **24ORE** della release, con impronta corrispondente. La variante deve essere disponibile su GitHub prima di incollarne il bootstrap su una VM.
+- Usa il [nuovo repository studenti](https://github.com/tommasinigiovanni/24orebs-ai-builder-kit): la release corrente è **v1.0.0-rc1**, con file `cloud-init-v1.0.0-rc1.yaml`. Il bootstrap punta al nuovo repository pubblico e la sua impronta è verificata. I vecchi cloud-init v1.7-24ore e Alleniamo Imprese rimangono nell’archivio e non sono quelli da distribuire.
 - Fai una prova su VM Hetzner nuova: chiave selezionata alla creazione, ingresso `agente` e `root` sulla 2222, nessun ingresso con password, certificato HTTPS, attivazione MFA e dashboard visibile dal PC.
 - Nella tua VM prepara una sessione `demo`, senza dati aziendali o credenziali sullo schermo. Risolvi il login Claude e le autorizzazioni prima della demo.
 - Prova il lavoro di 30–40 secondi, chiudi SSH e rientra. La VM rimane accesa.
