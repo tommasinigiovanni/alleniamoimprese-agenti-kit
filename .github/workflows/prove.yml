@@ -14,7 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Shellcheck
-        run: shellcheck -x -s bash install.sh bin/* test/*.sh
+        run: shellcheck -x -s bash install.sh bin/* test/*.sh profili/*.sh
+      - name: Importazione delle chiavi pubbliche
+        run: python3 -m unittest discover -s test -p 'test_*.py' -v
       - name: Rilascio riproducibile e sotto i 32 KiB
         run: |
           python3 tools/crea-rilascio.py v0.0-prova
@@ -27,6 +29,7 @@ jobs:
         run: |
           sudo apt-get install -y -q cloud-init > /dev/null
           cloud-init schema --config-file dist/cloud-init-v0.0-prova.yaml
+          cloud-init schema --config-file dist/cloud-init-24ore-v0.0-prova.yaml
       - name: qr-login-claude e qr-login-codex
         run: |
           sudo apt-get install -y -q tmux qrencode jq > /dev/null
@@ -59,7 +62,7 @@ jobs:
       - name: Copia del kit come lo trova la macchina
         run: |
           sudo mkdir -p /opt/agenti-kit
-          sudo cp -r install.sh bin boss console macchina test /opt/agenti-kit/
+          sudo cp -r install.sh bin boss console macchina profili test /opt/agenti-kit/
           echo v-prova | sudo tee /opt/agenti-kit/VERSIONE
       - name: Prima installazione
         run: sudo bash /opt/agenti-kit/install.sh

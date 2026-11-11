@@ -1,0 +1,30 @@
+[Unit]
+Description=Dashboard del corso AI Builder
+After=network.target
+ConditionPathExists=/home/agente/.config/session-board/password.hash
+ConditionPathExists=/home/agente/.local/state/session-board/auth/mfa.initialized
+
+[Service]
+Type=simple
+User=agente
+Group=agente
+WorkingDirectory=/opt/session-board
+Environment=HOME=/home/agente
+Environment=PATH=/home/agente/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=BOARD_BIND=127.0.0.1:8099
+Environment=BOARD_USERNAME=admin
+Environment=BOARD_PASSWORD_HASH_FILE=/home/agente/.config/session-board/password.hash
+Environment=BOARD_STATE_DIR=/home/agente/.local/state/session-board
+Environment=BOARD_COOKIE_SECURE=1
+Environment=BOARD_ALLOW_SEND=1
+Environment=BOARD_ACCOUNTS_ENABLED=1
+Environment=BOARD_MCP_ENABLED=0
+EnvironmentFile=/home/agente/.config/session-board/service.env
+ExecStart=/bin/sh /opt/session-board/run.sh
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

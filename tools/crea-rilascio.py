@@ -21,7 +21,7 @@ from pathlib import Path
 
 RADICE = Path(__file__).resolve().parent.parent
 REPOSITORY = "tommasinigiovanni/alleniamoimprese-agenti-kit"
-CONTENUTO = ["install.sh", "bin", "boss", "console", "macchina"]
+CONTENUTO = ["install.sh", "bin", "boss", "console", "macchina", "profili"]
 DATA_FISSA = 1767225600  # 2026-01-01, per un archivio sempre uguale
 LIMITE_CLOUD_INIT = 32 * 1024  # il massimo che accetta Hetzner
 
@@ -34,7 +34,7 @@ def voci(versione):
         if percorso.is_dir():
             elenco.append((f"agenti-kit/{nome}", None, 0o755))
             for file in sorted(percorso.rglob("*")):
-                if file.is_file() and file.name != ".DS_Store":
+                if file.is_file() and file.name != ".DS_Store" and '__pycache__' not in file.parts and file.suffix != '.pyc':
                     relativo = file.relative_to(RADICE).as_posix()
                     permessi = 0o755 if nome == "bin" else 0o644
                     elenco.append((f"agenti-kit/{relativo}", file.read_bytes(), permessi))
@@ -88,9 +88,19 @@ def main():
         sys.exit("Il testo di cloud-init supera i 32 KiB di Hetzner.")
     (dist / f"cloud-init-{versione}.yaml").write_text(testo)
 
+    testo_24ore = testo.replace(
+        "packages: [curl, ca-certificates]",
+        "disable_root: false\nssh_pwauth: false\npackages: [curl, ca-certificates]",
+    ).replace('bash /opt/agenti-kit/install.sh', 'AGENTI_PROFILO=24ore bash /opt/agenti-kit/install.sh')
+    testo_24ore = testo_24ore.replace('# Kit del corso', '# Profilo 24ORE: chiave SSH, porta 2222 e dashboard.\n# Kit del corso')
+    if len(testo_24ore.encode()) > LIMITE_CLOUD_INIT:
+        sys.exit("Il cloud-init 24ORE supera i 32 KiB di Hetzner.")
+    (dist / f"cloud-init-24ore-{versione}.yaml").write_text(testo_24ore)
+
     print(f"Archivio: dist/{nome} ({len(dati)} byte)")
     print(f"Impronta: {impronta}")
     print(f"Cloud-init: dist/cloud-init-{versione}.yaml ({len(testo.encode())} byte)")
+    print(f"Cloud-init 24ORE: dist/cloud-init-24ore-{versione}.yaml ({len(testo_24ore.encode())} byte)")
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 # Il promemoria della macchina: i comandi del kit e i pochi comandi chiave.
 # Lo mostra la console all'accesso; si rivede scrivendo: aiuto
 versione="$(cat /usr/local/share/agenti-kit/VERSIONE 2>/dev/null || echo 'kit')"
+profilo="$(cat /etc/agenti-kit/profilo 2>/dev/null || echo alleniamo)"
 cat <<FINE
 
 La tua macchina - Agenti che non dormono ($versione)
@@ -28,12 +29,22 @@ I comandi chiave:
 Dentro tmux: Ctrl+B e poi D per uscire lasciando tutto acceso.
 Se Ctrl+B non passa, Ctrl+A e poi D.
 
-In console si scrive a mano. Il testo incollato arriva sbagliato nei simboli:
-passano bene solo lettere e numeri.
-
 Non sai cosa fa un comando? Chiedilo a Claude prima di lanciarlo.
 
 FINE
+if [ "$profilo" = 24ore ]; then
+  cat <<FINE
+AI Builder: accesso SSH con chiave, porta 2222, utente agente.
+La stessa chiave permette anche l'accesso come root; Claude lavora come agente.
+Per iniziare: claude auth login   poi: tmux new -s boss
+La dashboard è già installata. Attivala una volta: plancia-attiva
+Indirizzo: $(cat /usr/local/share/agenti-kit/plancia-url 2>/dev/null || echo 'installazione in corso')
+La password e il secondo fattore della dashboard si scelgono al primo accesso.
+
+FINE
+else
+  echo 'In console si scrive a mano. Il testo incollato arriva sbagliato nei simboli.'
+fi
 
 # La password con cui agente è nato: si mostra finché sulla macchina non c'è
 # un'AI. Dopo il login di Claude o di Codex il file non c'è più.

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Attivazione personale: non viene eseguita da cloud-init o nel suo registro.
+set -euo pipefail
+if [ "$(id -un)" != agente ]; then
+  echo "Entra via SSH come agente, poi lancia plancia-attiva."
+  exit 1
+fi
+if [ ! -t 0 ] || [ ! -t 1 ]; then
+  echo "Serve il terminale SSH interattivo per scegliere password e secondo fattore."
+  exit 1
+fi
+cd /opt/session-board
+if [ ! -s "$HOME/.config/session-board/password.hash" ]; then
+  .venv/bin/python deploy/set-password.py
+fi
+if ! .venv/bin/python -c 'from pathlib import Path; from session_board.mfa_store import MFAStore; import sys; sys.exit(0 if MFAStore(Path.home()/".local/state/session-board/auth").enrolled("admin") else 1)'; then
+  .venv/bin/python deploy/setup-2fa.py --username admin
+fi
+sudo systemctl start session-board.service
+sudo systemctl is-active --quiet session-board.service
+echo
+printf 'Apri %s\n' "$(cat /usr/local/share/agenti-kit/plancia-url)"
+echo "Utente: admin. Al primo ingresso usa password e codice di attivazione, poi collega l'app di autenticazione e conserva i codici di recupero."

@@ -18,6 +18,15 @@ STATO_DIR=/var/lib/agenti-kit
 STATO="$STATO_DIR/stato"
 REGISTRO=/var/log/agenti-kit-install.log
 SENZA_SYSTEMD="${AGENTI_SENZA_SYSTEMD:-0}"
+PROFILO="${AGENTI_PROFILO:-$(cat /etc/agenti-kit/profilo 2>/dev/null || echo alleniamo)}"
+case "$PROFILO" in
+  alleniamo|24ore) ;;
+  *) echo "Profilo non riconosciuto: $PROFILO"; exit 1 ;;
+esac
+if [ -f /etc/agenti-kit/profilo ] && [ "$(cat /etc/agenti-kit/profilo)" != "$PROFILO" ]; then
+  echo "Non cambio il profilo di una macchina esistente: usa una VM nuova."
+  exit 1
+fi
 # Impronta della chiave di firma di Claude Code, pubblicata da Anthropic nella
 # documentazione di installazione (code.claude.com/docs/en/setup).
 IMPRONTA_CHIAVE_CLAUDE="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
@@ -56,6 +65,7 @@ passo() {
   else
     echo "$nome da-completare" >> "$STATO"
     echo "!!! $nome non completato: vedi sopra."
+    return 1
   fi
 }
 
@@ -178,15 +188,27 @@ console_italiana() {
 # Il nome comincia con 00: in sshd vale il primo valore letto, e cloud-init
 # scrive il suo file (50-cloud-init.conf) dopo.
 ssh_con_password() {
+  local password=yes root=no utenti=agente
+  if [ "$PROFILO" = 24ore ]; then
+    # cloud-init ha già inserito in root le chiavi scelte in Hetzner.
+    # Prima di cambiare SSH, si verifica una chiave e la si autorizza su agente.
+    python3 "$KIT_DIR/profili/chiavi_ssh.py" \
+      --source /root/.ssh/authorized_keys --destination "$CASA/.ssh/authorized_keys" \
+      --owner "$UTENTE" || return 1
+    password=no
+    root=prohibit-password
+    utenti="root agente"
+  fi
   install -d -m 755 /etc/ssh/sshd_config.d
-  cat > /etc/ssh/sshd_config.d/00-agenti-kit.conf <<'FINE'
+  cat > /etc/ssh/sshd_config.d/00-agenti-kit.conf <<FINE
 # Kit del corso "Agenti che non dormono".
 Port 2222
-PasswordAuthentication yes
+PasswordAuthentication $password
 PermitEmptyPasswords no
 KbdInteractiveAuthentication no
-PermitRootLogin no
-AllowUsers agente
+PubkeyAuthentication yes
+PermitRootLogin $root
+AllowUsers $utenti
 FINE
   chmod 644 /etc/ssh/sshd_config.d/00-agenti-kit.conf
   if ! grep -qE '^[[:space:]]*Include[[:space:]]+/etc/ssh/sshd_config\.d/\*\.conf' /etc/ssh/sshd_config; then
@@ -197,11 +219,21 @@ FINE
   sshd -t || return 1
   local valori
   valori="$(sshd -T 2>/dev/null)"
+  printf '%s\n' "$valori" | grep -E '^(port|passwordauthentication|permitrootlogin|allowusers|pubkeyauthentication) '
   printf '%s\n' "$valori" | grep -qx 'port 2222' || return 1
-  printf '%s\n' "$valori" | grep -qx 'passwordauthentication yes' || return 1
+  printf '%s\n' "$valori" | grep -qx "passwordauthentication $password" || return 1
   printf '%s\n' "$valori" | grep -qx 'permitemptypasswords no' || return 1
-  printf '%s\n' "$valori" | grep -qx 'permitrootlogin no' || return 1
-  printf '%s\n' "$valori" | grep -qx 'allowusers agente' || return 1
+  # OpenSSH normalizza prohibit-password con il vecchio nome without-password.
+  if [ "$PROFILO" = 24ore ]; then
+    printf '%s\n' "$valori" | grep -qxE 'permitrootlogin (prohibit-password|without-password)' || return 1
+  else
+    printf '%s\n' "$valori" | grep -qx 'permitrootlogin no' || return 1
+  fi
+  # sshd -T può stampare una riga allowusers per ogni utente.
+  [ "$(printf '%s\n' "$valori" | awk '$1 == "allowusers" {for (i=2; i<=NF; i++) print $i}' | sort)" = \
+    "$(printf '%s\n' "$utenti" | tr ' ' '\n' | sort)" ] || return 1
+  install -d -m 755 /etc/agenti-kit
+  printf '%s\n' "$PROFILO" > /etc/agenti-kit/profilo
   [ "$SENZA_SYSTEMD" = 1 ] && return 0
   local unita
   for unita in ssh.socket ssh.service; do
@@ -408,6 +440,9 @@ sessioni_che_restano() {
 
 console_tty1() {
   install -m 644 -o "$UTENTE" -g "$UTENTE" "$KIT_DIR/console/bash_profile" "$CASA/.bash_profile"
+  # Il profilo 24ORE entra via SSH; la console del fornitore resta una console
+  # di recupero e non apre automaticamente un utente amministratore.
+  [ "$PROFILO" = 24ore ] && return 0
   [ "$SENZA_SYSTEMD" = 1 ] && return 0
   install -d /etc/systemd/system/getty@tty1.service.d
   cat > /etc/systemd/system/getty@tty1.service.d/agenti-kit.conf <<FINE
@@ -420,9 +455,13 @@ FINE
 
 passo "sistema" sistema_base
 passo "utente" utente_agente
-passo "password" password_agente
+if [ "$PROFILO" = alleniamo ]; then
+  passo "password" password_agente
+fi
 passo "console-italiana" console_italiana
-passo "ssh" ssh_con_password
+# Nel profilo a chiave un errore qui deve fermare il provisioning, prima di
+# proseguire con una macchina non accessibile come agente.
+passo "ssh" ssh_con_password || { [ "$PROFILO" = alleniamo ] || exit 1; }
 passo "claude" claude_code
 passo "codex" codex_cli
 passo "file" file_agente
@@ -431,6 +470,11 @@ passo "comandi" comandi
 passo "installa" installa_senza_password
 passo "sessioni" sessioni_che_restano
 passo "console" console_tty1
+if [ "$PROFILO" = 24ore ]; then
+  # shellcheck source=profili/24ore.sh
+  source "$KIT_DIR/profili/24ore.sh"
+  passo "plancia" plancia_24ore
+fi
 
 if grep -q 'da-completare' "$STATO"; then
   echo "=== Installazione finita con passi da completare:"

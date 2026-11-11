@@ -1,0 +1,10 @@
+[Unit]
+Description=Riepilogo del corso dal lunedì al venerdì alle 08:30
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 08:30:00
+Persistent=true
+Unit=report-corso.service
+
+[Install]
+WantedBy=timers.target

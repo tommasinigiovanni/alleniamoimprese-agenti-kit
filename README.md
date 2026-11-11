@@ -1,5 +1,51 @@
 # Il kit della macchina: Agenti che non dormono
 
+La distribuzione per gli studenti AI Builder è ora nel repository
+[24orebs-ai-builder-kit](https://github.com/tommasinigiovanni/24orebs-ai-builder-kit),
+con cronologia nuova, cloud-init e release dedicate. Questo repository conserva
+lo storico del kit e il materiale docente. Per il nuovo corso usare i download
+del repository studenti.
+
+## Variante 24ORE Business School
+
+Il cloud-init `cloud-init-24ore-VERSIONE.yaml` seleziona il profilo AI Builder.
+Il cloud-init senza `24ore` mantiene il percorso originale qui descritto.
+Le release già distribuite non cambiano.
+
+Nel profilo 24ORE si seleziona una chiave SSH in Hetzner alla creazione della
+VM, insieme al cloud-init. Hetzner la inserisce in root; il kit la verifica e
+la autorizza anche per `agente`, senza un secondo copia e incolla. SSH resta
+sulla **porta 2222**, consente `root` e `agente` con chiave e disabilita
+l'autenticazione con password. Si entra normalmente come `agente`.
+`sudo` senza password e la conferma di Claude Code restano quelli della v1.6.
+Il profilo viene ricordato per i successivi rilanci del kit.
+
+La dashboard portable v1.2 viene scaricata con SHA256 fissato, installata in
+`/opt/session-board` e predisposta come servizio **dell'utente agente** dietro
+Caddy, con HTTPS e nome `IP-con-trattini.sslip.io`. Nel firewall Hetzner aprire
+TCP 2222 per SSH (preferibilmente dal proprio IP), TCP 80 e 443 per HTTPS.
+Il partecipante entra in SSH e lancia **`plancia-attiva`**: sceglie la password
+della dashboard, ottiene un codice monouso e registra il secondo fattore nel
+browser. Nessuna password, chiave privata o codice MFA è incluso nel cloud-init
+o nel registro dell'installazione. La dashboard non viene avviata prima della
+preparazione delle credenziali. Password e MFA già presenti vengono conservati.
+
+Il profilo è per **VM nuove**, non per convertire quelle degli studenti della
+prima edizione. Prima della diretta va provato anche il percorso effettivo
+Hetzner e il rilascio del certificato HTTPS.
+
+Il progetto `~/progetti/report-settimanale` contiene un programma già eseguibile
+con dati fittizi e istruzioni per personalizzarlo con Claude. Servizio e timer
+utente `report-corso` sono predisposti ma spenti: si provano manualmente prima
+di attivare la programmazione. Hindsight e notifiche esterne non sono compresi
+in questa variante.
+
+Materiale 24ORE: [guida Mac/Windows](materiali/24ore/GUIDA-STUDENTI.md),
+[regia delle quattro lezioni](materiali/24ore/REGIA.md) e
+[regia HTML offline](materiali/24ore/regia.html), con timer e comandi copiabili.
+
+## Percorso originale Alleniamo Imprese
+
 Il kit che prepara la macchina del corso "Agenti che non dormono" di
 AlleniamoImprese. Non si installa a mano: quando crei il server su Hetzner
 incolli nel campo cloud-init il testo della release, e la macchina fa da sola.

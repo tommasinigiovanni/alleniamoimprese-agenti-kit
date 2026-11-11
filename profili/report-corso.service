@@ -1,0 +1,8 @@
+[Unit]
+Description=Riepilogo delle attività del corso AI Builder
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/agente/progetti/report-settimanale
+ExecStart=/usr/bin/python3 /home/agente/progetti/report-settimanale/riepilogo.py
+UMask=0077

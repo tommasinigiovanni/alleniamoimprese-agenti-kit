@@ -6,6 +6,7 @@ set -uo pipefail
 UTENTE=agente
 STATO=/var/lib/agenti-kit/stato
 SSH_KIT=/etc/ssh/sshd_config.d/00-agenti-kit.conf
+PROFILO="$(cat /etc/agenti-kit/profilo 2>/dev/null || echo alleniamo)"
 da_fare=0
 
 riga() {
@@ -103,7 +104,24 @@ else
 fi
 
 # 6. SSH: sulla porta 2222, con la password, solo agente. Root non entra.
-if grep -qx 'Port 2222' "$SSH_KIT" 2>/dev/null &&
+if [ "$PROFILO" = 24ore ]; then
+  if grep -qx 'Port 2222' "$SSH_KIT" 2>/dev/null &&
+     grep -qx 'PasswordAuthentication no' "$SSH_KIT" 2>/dev/null &&
+     grep -qx 'PermitRootLogin prohibit-password' "$SSH_KIT" 2>/dev/null &&
+     grep -qx 'AllowUsers root agente' "$SSH_KIT" 2>/dev/null &&
+     [ -s "$HOME/.ssh/authorized_keys" ]; then
+    riga ok "SSH: porta 2222, con chiave, root e agente. Password SSH disabilitata"
+  else
+    riga no "SSH: controllare chiavi e profilo 24ORE (porta 2222, root e agente)"
+  fi
+  if [ ! -x /opt/session-board/.venv/bin/python ]; then
+    riga no "Dashboard non installata: controllare il passo plancia nel registro"
+  elif systemctl is-active --quiet session-board.service; then
+    riga ok "Dashboard attiva: $(cat /usr/local/share/agenti-kit/plancia-url 2>/dev/null)"
+  else
+    riga no "Dashboard installata: per attivarla scrivi plancia-attiva"
+  fi
+elif grep -qx 'Port 2222' "$SSH_KIT" 2>/dev/null &&
    grep -qx 'PasswordAuthentication yes' "$SSH_KIT" 2>/dev/null &&
    grep -qx 'PermitRootLogin no' "$SSH_KIT" 2>/dev/null &&
    grep -qx 'AllowUsers agente' "$SSH_KIT" 2>/dev/null; then
@@ -143,9 +161,11 @@ fi
 pubbliche="$( {
     ss -H -ltnp 2>/dev/null | awk '!/\(\("syncthing",/ {print "tcp " $4}'
     ss -H -lunp 2>/dev/null | awk '!/\(\("syncthing",/ {print "udp " $4}'
-  } | sed -E 's/%[^:]*:/:/' | awk '
+  } | sed -E 's/%[^:]*:/:/' | awk -v profilo="$PROFILO" '
     $2 ~ /^(127\.[0-9.]+|\[?::1\]?|\[::ffff:127\.[0-9.]+\]):[0-9]+$/ { next }
     $1 == "tcp" && $2 ~ /:2222$/ { next }
+    profilo == "24ore" && $1 == "tcp" && $2 ~ /:(80|443)$/ { next }
+    profilo == "24ore" && $1 == "udp" && $2 ~ /:443$/ { next }
     $1 == "udp" && $2 ~ /:(68|546)$/ { next }
     { print $1 "/" $2 }' | paste -sd' ' -)"
 if [ -z "$pubbliche" ]; then
